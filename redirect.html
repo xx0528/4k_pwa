@@ -34,25 +34,51 @@
             font-size: 16px;
             color: #888;
         }
+        .debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #6BECA9;
+            font-size: 12px;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
+    <div class="debug" id="debugInfo"></div>
     <div class="loader"></div>
     <div class="status" id="status">enter game ...</div>
 
     <script>
+        // 调试日志
+        const debugLog = (msg) => {
+            const debugEl = document.getElementById('debugInfo');
+            const time = new Date().toLocaleTimeString();
+            debugEl.textContent += `[${time}] ${msg}\n`;
+            console.log('[PWA Redirect]', msg);
+        };
+
         // ============================================
         // 配置项（在这里修改游戏域名）
         // ============================================
 
-        // 游戏域名列表（按优先级排序，第一个是当前使用的，失败后自动切换下一个）
+        debugLog('====== PWA Redirect Debug ======');
+
+        // 游戏域名列表（按优先级排序）
         const GAME_DOMAINS = [
-            'https://7p.game',    // 当前使用的域名
-            'https://4u.game'     // 备用域名
+            'https://7p.game',
+            'https://4u.game'
         ];
 
+        debugLog('GAME_DOMAINS: ' + JSON.stringify(GAME_DOMAINS));
+
         // 渠道ID
-        const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
+        const urlParams = new URLSearchParams(window.location.search);
+        const channelId = urlParams.get('channel_id') || '10001';
+        debugLog('channelId: ' + channelId);
+        debugLog('full URL: ' + window.location.href);
 
         // ============================================
         // 核心逻辑
@@ -61,13 +87,16 @@
         // 检测域名是否可用
         async function checkDomain(domain) {
             try {
-                await fetch(domain + '/?t=' + Date.now(), {
+                debugLog(`检测域名: ${domain}`);
+                const response = await fetch(domain + '/?t=' + Date.now(), {
                     method: 'HEAD',
                     mode: 'no-cors',
                     cache: 'no-store'
                 });
+                debugLog(`✅ ${domain} 可用`);
                 return true;
             } catch (e) {
+                debugLog(`❌ ${domain} 失败: ${e.message}`);
                 return false;
             }
         }
@@ -75,14 +104,15 @@
         // 找到第一个可用的域名
         async function findAvailableDomain() {
             for (const domain of GAME_DOMAINS) {
+                debugLog(`尝试域名: ${domain}`);
                 const available = await checkDomain(domain);
                 if (available) {
-                    console.log('✅ 使用域名:', domain);
+                    debugLog(`✅ 使用域名: ${domain}`);
                     return domain;
                 }
-                console.log('❌ 域名不可用:', domain);
             }
-            // 全部失败，使用第一个（碰碰运气）
+            // 全部失败，使用第一个
+            debugLog(`⚠️ 全部失败，使用第一个: ${GAME_DOMAINS[0]}`);
             return GAME_DOMAINS[0];
         }
 
@@ -90,12 +120,18 @@
         async function redirectToGame() {
             const statusEl = document.getElementById('status');
             statusEl.textContent = '正在连接游戏...';
+            debugLog('开始跳转...');
 
             const domain = await findAvailableDomain();
             const targetUrl = `${domain}/index.html?channel_id=${channelId}`;
 
+            debugLog(`最终跳转地址: ${targetUrl}`);
             statusEl.textContent = '正在进入游戏...';
-            window.location.href = targetUrl;
+
+            // 延迟一下让调试信息显示出来
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 2000);
         }
 
         // 自动执行
