@@ -52,46 +52,128 @@
 </head>
 <body>
     <div class="loader"></div>
-    <div class="status" id="status">正在获取服务器地址...</div>
+    <div class="status" id="status">正在进入游戏...</div>
     <button class="retry-btn" id="retryBtn" onclick="redirectToGame()">重试</button>
 
     <script>
-        // ============================================
-        // 配置项
-        // ============================================
+        console.log("=== redirect.html 快速加载模式 ===");
+        console.log("当前时间:", new Date().toISOString());
 
-        // 渠道ID（从URL参数获取，默认10001）
+        // 渠道ID
         const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
 
-        // 你的游戏后台API域名列表（按优先级排序）
-        // 第一个是主要的，当第一个不可用时会自动切换到下一个
-        const API_DOMAINS = [
-            'https://api.4k.game',
-            'https://api2.4k.game',
-            'https:// phecda-backend.your-domain.com'  // 替换为实际域名
-        ];
+        // 本地缓存key
+        const CACHE_KEY = 'last_working_domain';
+        const CACHE_TIMESTAMP_KEY = 'last_working_domain_time';
+        const CACHE_VALID_DURATION = 24 * 60 * 60 * 1000; // 24小时有效期
 
-        // 游戏页面域名列表（备用，当API全部失败时使用）
-        const GAME_DOMAINS = [
+        // 备用域名列表（按优先级排序）
+        const FALLBACK_DOMAINS = [
+            'https://7p.game',
             'https://4k.game',
             'https://4k2.game',
             'https://new.4k.game'
         ];
 
-        // 跳转超时时间（毫秒）
-        const TIMEOUT = 5000;
+        // API域名列表
+        const API_DOMAINS = [
+            'https://api.4k.game',
+            'https://api2.4k.game'
+        ];
 
-        // ============================================
-        // 核心逻辑
-        // ============================================
+        // 超时时间（毫秒）- 缩短到1.5秒
+        const TIMEOUT = 1500;
 
-        // 尝试从API获取游戏URL
-        async function fetchGameUrlFromApi(domain) {
-            const url = `${domain}/api/getGameUrl?channel_id=${channelId}`;
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-
+        // 获取缓存的域名
+        function getCachedDomain() {
             try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+
+                if (cached && timestamp) {
+                    const age = Date.now() - parseInt(timestamp);
+                    if (age < CACHE_VALID_DURATION) {
+                        console.log('✅ 使用缓存域名:', cached, '(缓存时间:', Math.floor(age / 1000 / 60), '分钟前)');
+                        return cached;
+                    } else {
+                        console.log('⚠️ 缓存已过期，清除缓存');
+                        localStorage.removeItem(CACHE_KEY);
+                        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+                    }
+                }
+            } catch (e) {
+                console.error('读取缓存失败:', e);
+            }
+            return null;
+        }
+
+        // 保存域名到缓存
+        function cacheDomain(domain) {
+            try {
+                localStorage.setItem(CACHE_KEY, domain);
+                localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+                console.log('💾 缓存域名:', domain);
+            } catch (e) {
+                console.error('保存缓存失败:', e);
+            }
+        }
+
+        // 快速检测域名是否可用（HEAD请求）
+        async function checkDomainFast(domain) {
+            const startTime = Date.now();
+            try {
+                const testUrl = domain + '/?t=' + Date.now();
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+
+                await fetch(testUrl, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                const elapsed = Date.now() - startTime;
+                console.log(`✅ 域名可用: ${domain} (${elapsed}ms)`);
+                return true;
+            } catch (e) {
+                const elapsed = Date.now() - startTime;
+                console.log(`❌ 域名不可用: ${domain} (${elapsed}ms)`, e.message);
+                return false;
+            }
+        }
+
+        // 并行检测多个域名，返回第一个可用的
+        async function findFirstWorkingDomain(domains) {
+            console.log('🔍 并行检测域名:', domains);
+
+            return new Promise((resolve) => {
+                let resolved = false;
+                let checkedCount = 0;
+
+                domains.forEach(async (domain) => {
+                    const isWorking = await checkDomainFast(domain);
+                    checkedCount++;
+
+                    if (isWorking && !resolved) {
+                        resolved = true;
+                        resolve(domain);
+                    } else if (checkedCount === domains.length && !resolved) {
+                        resolve(null);
+                    }
+                });
+            });
+        }
+
+        // 从API获取游戏URL
+        async function fetchGameUrlFromApi(domain) {
+            const startTime = Date.now();
+            try {
+                const url = `${domain}/api/getGameUrl?channel_id=${channelId}`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+
                 const response = await fetch(url, {
                     signal: controller.signal,
                     mode: 'cors',
@@ -102,80 +184,87 @@
                 if (response.ok) {
                     const result = await response.json();
                     if (result.code === 0 && result.data && result.data.h5_link) {
+                        const elapsed = Date.now() - startTime;
+                        console.log(`✅ API返回域名: ${result.data.h5_link} (${elapsed}ms)`);
                         return result.data.h5_link;
                     }
                 }
             } catch (error) {
-                console.log(`⚠️ API请求失败 (${domain}):`, error.message);
+                const elapsed = Date.now() - startTime;
+                console.log(`❌ API请求失败 (${domain}): ${error.message} (${elapsed}ms)`);
             }
             return null;
         }
 
-        // 尝试获取所有API域名，返回第一个成功的
-        async function getGameUrlFromApi() {
-            for (const domain of API_DOMAINS) {
-                const url = await fetchGameUrlFromApi(domain);
-                if (url) {
-                    console.log('✅ 从API获取到游戏地址:', url);
-                    return url;
+        // 主逻辑：快速获取可用域名
+        async function getWorkingDomain() {
+            const statusEl = document.getElementById('status');
+
+            // 策略1：优先使用缓存的域名
+            statusEl.textContent = '正在连接...';
+            const cachedDomain = getCachedDomain();
+            if (cachedDomain) {
+                const isWorking = await checkDomainFast(cachedDomain);
+                if (isWorking) {
+                    console.log('🚀 使用缓存域名，直接跳转');
+                    return cachedDomain;
+                } else {
+                    console.log('⚠️ 缓存域名不可用，尝试其他方式');
                 }
             }
+
+            // 策略2：并行检测备用域名列表
+            statusEl.textContent = '正在查找服务器...';
+            const workingDomain = await findFirstWorkingDomain(FALLBACK_DOMAINS);
+            if (workingDomain) {
+                console.log('🚀 找到可用备用域名:', workingDomain);
+                cacheDomain(workingDomain);
+                return workingDomain;
+            }
+
+            // 策略3：从API获取最新域名
+            statusEl.textContent = '正在获取最新地址...';
+            for (const apiDomain of API_DOMAINS) {
+                const gameUrl = await fetchGameUrlFromApi(apiDomain);
+                if (gameUrl) {
+                    // 提取域名部分
+                    try {
+                        const url = new URL(gameUrl);
+                        const domain = url.origin;
+                        console.log('🚀 API返回域名:', domain);
+                        cacheDomain(domain);
+                        return gameUrl; // 返回完整URL
+                    } catch (e) {
+                        console.error('解析API返回的URL失败:', e);
+                    }
+                }
+            }
+
             return null;
         }
 
-        // 简单检测域名是否可用（使用no-cors模式）
-        async function checkDomainAvailable(domain) {
-            try {
-                const testUrl = domain + '/?t=' + Date.now();
-                await fetch(testUrl, {
-                    method: 'HEAD',
-                    mode: 'no-cors',
-                    cache: 'no-store'
-                });
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-
-        // 从游戏域名列表中选择一个可用的
-        async function getFallbackGameUrl() {
-            for (const domain of GAME_DOMAINS) {
-                const available = await checkDomainAvailable(domain);
-                if (available) {
-                    console.log('✅ 使用备用游戏域名:', domain);
-                    return domain + `/index.html?channel_id=${channelId}`;
-                }
-            }
-            // 兜底：使用当前域名
-            return window.location.origin + window.location.pathname;
-        }
-
+        // 跳转到游戏
         async function redirectToGame() {
             const statusEl = document.getElementById('status');
             const retryBtn = document.getElementById('retryBtn');
 
-            statusEl.textContent = '正在获取服务器地址...';
             retryBtn.style.display = 'none';
 
-            let targetUrl = null;
+            const startTime = Date.now();
+            const targetUrl = await getWorkingDomain();
+            const elapsed = Date.now() - startTime;
 
-            // 方法1：从API获取最新域名（优先）
-            statusEl.textContent = '正在连接服务器...';
-            targetUrl = await getGameUrlFromApi();
-
-            // 方法2：如果所有API都失败，使用备用游戏域名
-            if (!targetUrl) {
-                statusEl.textContent = '正在尝试备用服务器...';
-                targetUrl = await getFallbackGameUrl();
-            }
-
-            // 执行跳转
             if (targetUrl) {
-                // 保留URL参数（channel_id等）
-                const params = window.location.search;
-                const finalUrl = targetUrl + (params || '');
+                // 构建完整URL
+                let finalUrl = targetUrl;
+                if (!targetUrl.includes('?')) {
+                    finalUrl += `/index.html?channel_id=${channelId}`;
+                } else if (!targetUrl.includes('channel_id')) {
+                    finalUrl += `&channel_id=${channelId}`;
+                }
 
+                console.log(`🎮 准备跳转到游戏 (总耗时: ${elapsed}ms)`);
+                console.log('目标URL:', finalUrl);
                 statusEl.textContent = '正在进入游戏...';
 
                 setTimeout(() => {
@@ -184,14 +273,15 @@
                     } else {
                         window.location.href = finalUrl;
                     }
-                }, 500);
+                }, 300);
             } else {
+                console.error(`❌ 所有域名都不可用 (总耗时: ${elapsed}ms)`);
                 statusEl.innerHTML = '无法连接到服务器<br>请检查网络后重试';
                 retryBtn.style.display = 'block';
             }
         }
 
-        // 页面加载后自动执行
+        // 页面加载后立即执行
         window.addEventListener('load', redirectToGame);
     </script>
 </body>
