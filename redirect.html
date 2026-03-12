@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>正在进入游戏...</title>
+    <title>loading...</title>
     <style>
         body {
             background: #000;
@@ -52,7 +52,7 @@
 </head>
 <body>
     <div class="loader"></div>
-    <div class="status" id="status">正在进入游戏...</div>
+    <div class="status" id="status">loading...</div>
     <button class="retry-btn" id="retryBtn" onclick="redirectToGame()">重试</button>
 
     <script>
@@ -71,8 +71,9 @@
         const FALLBACK_DOMAINS = [
             'https://7p.game',
             'https://4k.game',
-            'https://4k2.game',
-            'https://new.4k.game'
+            'https://777grand.xpthirty.click',
+            'https://777grand.xptirty2.click',
+            'https://777grand.com'
         ];
 
         // API域名列表
@@ -118,25 +119,33 @@
             }
         }
 
-        // 快速检测域名是否可用（HEAD请求）
+        // 快速检测域名是否可用（尝试实际访问）
         async function checkDomainFast(domain) {
             const startTime = Date.now();
             try {
-                const testUrl = domain + '/?t=' + Date.now();
+                // 尝试访问一个轻量级的资源（favicon或根路径）
+                const testUrl = domain + '/favicon.ico?t=' + Date.now();
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
-                await fetch(testUrl, {
-                    method: 'HEAD',
-                    mode: 'no-cors',
+                const response = await fetch(testUrl, {
+                    method: 'GET',
                     cache: 'no-store',
                     signal: controller.signal
                 });
 
                 clearTimeout(timeoutId);
                 const elapsed = Date.now() - startTime;
-                console.log(`✅ 域名可用: ${domain} (${elapsed}ms)`);
-                return true;
+
+                // 检查状态码：200-399为成功，403/404等为失败
+                if (response.ok || response.status === 404) {
+                    // 404也算可用，因为说明服务器在线，只是资源不存在
+                    console.log(`✅ 域名可用: ${domain} (${response.status}, ${elapsed}ms)`);
+                    return true;
+                } else {
+                    console.log(`❌ 域名返回错误: ${domain} (${response.status}, ${elapsed}ms)`);
+                    return false;
+                }
             } catch (e) {
                 const elapsed = Date.now() - startTime;
                 console.log(`❌ 域名不可用: ${domain} (${elapsed}ms)`, e.message);
@@ -265,7 +274,7 @@
 
                 console.log(`🎮 准备跳转到游戏 (总耗时: ${elapsed}ms)`);
                 console.log('目标URL:', finalUrl);
-                statusEl.textContent = '正在进入游戏...';
+                statusEl.textContent = 'loading...';
 
                 setTimeout(() => {
                     if (window.matchMedia('(display-mode: standalone)').matches) {
