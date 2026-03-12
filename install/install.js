@@ -169,9 +169,16 @@ var startChromeNum = 0;
         }
 
         if(isIOSOrMac()){//苹果设备
-            // 已经在GitHub页面，跳转到redirect.html让用户添加到主屏幕
+            console.log("=== install.js: 检测到iOS/Mac设备 ===")
+            console.log("User Agent:", navigator.userAgent)
+            console.log("当前URL:", window.location.href)
+
+            // 跳转到iOS安装引导页面，显示安装步骤图片
             const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
-            window.location.href = `./redirect.html?channel_id=${channelId}`;
+            const targetUrl = `./ios-guide.html?channel_id=${channelId}`;
+            console.log("准备跳转到ios-guide.html:", targetUrl)
+
+            window.location.href = targetUrl;
             return
         }
         app.recordPwaInstallUser("clickInstallButton")

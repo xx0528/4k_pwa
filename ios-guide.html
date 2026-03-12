@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iOS安装引导 - 4K GAME</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-top: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #6BECA9;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: #888;
+        }
+
+        .guide-image {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(107, 236, 169, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .tips {
+            background: rgba(107, 236, 169, 0.1);
+            border: 1px solid #6BECA9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .tips h3 {
+            color: #6BECA9;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .tips ol {
+            padding-left: 20px;
+            line-height: 1.8;
+        }
+
+        .tips li {
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+
+        .browser-name {
+            color: #6BECA9;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #6BECA9;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 添加到主屏幕</h1>
+            <p>按照下方图片操作，即可安装游戏</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>正在检测浏览器...</p>
+        </div>
+
+        <div id="content" style="display: none; width: 100%; max-width: 500px;">
+            <img id="guideImage" class="guide-image" alt="安装引导">
+
+            <div class="tips">
+                <h3>📝 安装步骤</h3>
+                <ol id="stepsList">
+                    <!-- 步骤将由JavaScript动态生成 -->
+                </ol>
+            </div>
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            <p>⚠️ 无法加载引导图片</p>
+            <p>请使用Safari浏览器打开此页面</p>
+        </div>
+    </div>
+
+    <script src="./install/channel.js"></script>
+    <script>
+        console.log("=== iOS安装引导页面加载 ===");
+        console.log("User Agent:", navigator.userAgent);
+
+        // 检测浏览器类型
+        function detectBrowser() {
+            const ua = navigator.userAgent.toLowerCase();
+
+            if (ua.indexOf('crios') > -1 || ua.indexOf('chrome') > -1) {
+                return 'chrome';
+            } else if (ua.indexOf('fxios') > -1 || ua.indexOf('firefox') > -1) {
+                return 'firefox';
+            } else if (ua.indexOf('fbav') > -1 || ua.indexOf('fb_iab') > -1) {
+                return 'facebook';
+            } else if (ua.indexOf('instagram') > -1) {
+                return 'instagram';
+            } else if (ua.indexOf('messenger') > -1 || ua.indexOf('fbmessenger') > -1) {
+                return 'messenger';
+            } else if (ua.indexOf('safari') > -1 && ua.indexOf('crios') === -1) {
+                return 'safari';
+            }
+
+            return 'safari'; // 默认Safari
+        }
+
+        // 获取引导图片和步骤
+        function getGuideInfo(browser) {
+            const guides = {
+                safari: {
+                    image: './install/ios_safari_tip.jpg',
+                    steps: [
+                        '点击底部的<span class="browser-name">分享按钮</span>（方框带向上箭头）',
+                        '在弹出菜单中找到<span class="browser-name">"添加到主屏幕"</span>',
+                        '点击右上角的<span class="browser-name">"添加"</span>按钮',
+                        '完成！游戏图标已添加到您的主屏幕'
+                    ]
+                },
+                chrome: {
+                    image: './install/ios_chrome_tip.png',
+                    steps: [
+                        '点击右上角的<span class="browser-name">三个点</span>菜单',
+                        '选择<span class="browser-name">"分享"</span>选项',
+                        '找到并点击<span class="browser-name">"添加到主屏幕"</span>',
+                        '点击<span class="browser-name">"添加"</span>完成安装'
+                    ]
+                },
+                facebook: {
+                    image: './install/ios_facebook_tip.jpg',
+                    steps: [
+                        '点击右上角的<span class="browser-name">三个点</span>菜单',
+                        '选择<span class="browser-name">"在Safari中打开"</span>',
+                        '在Safari中点击底部的<span class="browser-name">分享按钮</span>',
+                        '选择<span class="browser-name">"添加到主屏幕"</span>并完成'
+                    ]
+                },
+                messenger: {
+                    image: './install/ios_messager_tip.jpg',
+                    steps: [
+                        '点击右上角的<span class="browser-name">三个点</span>菜单',
+                        '选择<span class="browser-name">"在Safari中打开"</span>',
+                        '在Safari中点击底部的<span class="browser-name">分享按钮</span>',
+                        '选择<span class="browser-name">"添加到主屏幕"</span>并完成'
+                    ]
+                }
+            };
+
+            return guides[browser] || guides.safari;
+        }
+
+        // 显示引导内容
+        function showGuide() {
+            const browser = detectBrowser();
+            console.log("检测到浏览器:", browser);
+
+            const guideInfo = getGuideInfo(browser);
+            const guideImage = document.getElementById('guideImage');
+            const stepsList = document.getElementById('stepsList');
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            const error = document.getElementById('error');
+
+            // 加载图片
+            const img = new Image();
+            img.onload = function() {
+                console.log("引导图片加载成功");
+                guideImage.src = guideInfo.image;
+
+                // 生成步骤列表
+                stepsList.innerHTML = guideInfo.steps
+                    .map(step => `<li>${step}</li>`)
+                    .join('');
+
+                // 显示内容
+                loading.style.display = 'none';
+                content.style.display = 'block';
+            };
+
+            img.onerror = function() {
+                console.error("引导图片加载失败");
+                loading.style.display = 'none';
+                error.style.display = 'block';
+            };
+
+            img.src = guideInfo.image;
+        }
+
+        // 页面加载完成后显示引导
+        window.addEventListener('load', function() {
+            console.log("页面加载完成，开始显示引导");
+            setTimeout(showGuide, 500);
+        });
+    </script>
+</body>
+</html>
