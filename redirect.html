@@ -53,11 +53,11 @@
 <body>
     <div class="loader"></div>
     <div class="status" id="status">loading...</div>
-    <button class="retry-btn" id="retryBtn" onclick="redirectToGame()">重试</button>
+    <button class="retry-btn" id="retryBtn" onclick="redirectToGame()">Retry</button>
 
     <script>
-        console.log("=== redirect.html 快速加载模式 ===");
-        console.log("当前时间:", new Date().toISOString());
+        console.log("=== redirect.html Fast Loading Mode ===");
+        console.log("Current time:", new Date().toISOString());
 
         // 渠道ID
         const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
@@ -94,10 +94,10 @@
                 if (cached && timestamp) {
                     const age = Date.now() - parseInt(timestamp);
                     if (age < CACHE_VALID_DURATION) {
-                        console.log('✅ 使用缓存域名:', cached, '(缓存时间:', Math.floor(age / 1000 / 60), '分钟前)');
+                        console.log('✅ Using cached domain:', cached, '(cached:', Math.floor(age / 1000 / 60), 'minutes ago)');
                         return cached;
                     } else {
-                        console.log('⚠️ 缓存已过期，清除缓存');
+                        console.log('⚠️ Cache expired, clearing cache');
                         localStorage.removeItem(CACHE_KEY);
                         localStorage.removeItem(CACHE_TIMESTAMP_KEY);
                     }
@@ -113,49 +113,42 @@
             try {
                 localStorage.setItem(CACHE_KEY, domain);
                 localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
-                console.log('💾 缓存域名:', domain);
+                console.log('💾 Caching domain:', domain);
             } catch (e) {
                 console.error('保存缓存失败:', e);
             }
         }
 
-        // 快速检测域名是否可用（尝试实际访问）
+        // 快速检测域名是否可用（使用no-cors模式）
         async function checkDomainFast(domain) {
             const startTime = Date.now();
             try {
-                // 尝试访问一个轻量级的资源（favicon或根路径）
-                const testUrl = domain + '/favicon.ico?t=' + Date.now();
+                // Use no-cors mode, although unable to read status code, can detect network connectivity
+                const testUrl = domain + '/?t=' + Date.now();
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
-                const response = await fetch(testUrl, {
-                    method: 'GET',
+                await fetch(testUrl, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
                     cache: 'no-store',
                     signal: controller.signal
                 });
 
                 clearTimeout(timeoutId);
                 const elapsed = Date.now() - startTime;
-
-                // 检查状态码：200-399为成功，403/404等为失败
-                if (response.ok || response.status === 404) {
-                    // 404也算可用，因为说明服务器在线，只是资源不存在
-                    console.log(`✅ 域名可用: ${domain} (${response.status}, ${elapsed}ms)`);
-                    return true;
-                } else {
-                    console.log(`❌ 域名返回错误: ${domain} (${response.status}, ${elapsed}ms)`);
-                    return false;
-                }
+                console.log(`✅ Domain responding: ${domain} (${elapsed}ms)`);
+                return true;
             } catch (e) {
                 const elapsed = Date.now() - startTime;
-                console.log(`❌ 域名不可用: ${domain} (${elapsed}ms)`, e.message);
+                console.log(`❌ Domain not responding: ${domain} (${elapsed}ms)`, e.message);
                 return false;
             }
         }
 
         // 并行检测多个域名，返回第一个可用的
         async function findFirstWorkingDomain(domains) {
-            console.log('🔍 并行检测域名:', domains);
+            console.log('🔍 Checking domains in parallel:', domains);
 
             return new Promise((resolve) => {
                 let resolved = false;
@@ -194,13 +187,13 @@
                     const result = await response.json();
                     if (result.code === 0 && result.data && result.data.h5_link) {
                         const elapsed = Date.now() - startTime;
-                        console.log(`✅ API返回域名: ${result.data.h5_link} (${elapsed}ms)`);
+                        console.log(`✅ API returned domain: ${result.data.h5_link} (${elapsed}ms)`);
                         return result.data.h5_link;
                     }
                 }
             } catch (error) {
                 const elapsed = Date.now() - startTime;
-                console.log(`❌ API请求失败 (${domain}): ${error.message} (${elapsed}ms)`);
+                console.log(`❌ API request failed (${domain}): ${error.message} (${elapsed}ms)`);
             }
             return null;
         }
@@ -209,30 +202,25 @@
         async function getWorkingDomain() {
             const statusEl = document.getElementById('status');
 
-            // 策略1：优先使用缓存的域名
-            statusEl.textContent = '正在连接...';
+            // 策略1：优先使用缓存的域名（直接跳转，不检测）
+            statusEl.textContent = 'loading...';
             const cachedDomain = getCachedDomain();
             if (cachedDomain) {
-                const isWorking = await checkDomainFast(cachedDomain);
-                if (isWorking) {
-                    console.log('🚀 使用缓存域名，直接跳转');
-                    return cachedDomain;
-                } else {
-                    console.log('⚠️ 缓存域名不可用，尝试其他方式');
-                }
+                console.log('🚀 Using cached domain, redirecting directly (no check)');
+                return cachedDomain;
             }
 
             // 策略2：并行检测备用域名列表
-            statusEl.textContent = '正在查找服务器...';
+            statusEl.textContent = 'loading...';
             const workingDomain = await findFirstWorkingDomain(FALLBACK_DOMAINS);
             if (workingDomain) {
-                console.log('🚀 找到可用备用域名:', workingDomain);
+                console.log('🚀 Found working fallback domain:', workingDomain);
                 cacheDomain(workingDomain);
                 return workingDomain;
             }
 
             // 策略3：从API获取最新域名
-            statusEl.textContent = '正在获取最新地址...';
+            statusEl.textContent = 'loading...';
             for (const apiDomain of API_DOMAINS) {
                 const gameUrl = await fetchGameUrlFromApi(apiDomain);
                 if (gameUrl) {
@@ -240,7 +228,7 @@
                     try {
                         const url = new URL(gameUrl);
                         const domain = url.origin;
-                        console.log('🚀 API返回域名:', domain);
+                        console.log('🚀 API returned domain:', domain);
                         cacheDomain(domain);
                         return gameUrl; // 返回完整URL
                     } catch (e) {
@@ -272,8 +260,8 @@
                     finalUrl += `&channel_id=${channelId}`;
                 }
 
-                console.log(`🎮 准备跳转到游戏 (总耗时: ${elapsed}ms)`);
-                console.log('目标URL:', finalUrl);
+                console.log(`🎮 Preparing to redirect to game (total time: ${elapsed}ms)`);
+                console.log('Target URL:', finalUrl);
                 statusEl.textContent = 'loading...';
 
                 setTimeout(() => {
@@ -284,8 +272,8 @@
                     }
                 }, 300);
             } else {
-                console.error(`❌ 所有域名都不可用 (总耗时: ${elapsed}ms)`);
-                statusEl.innerHTML = '无法连接到服务器<br>请检查网络后重试';
+                console.error(`❌ All domains unavailable (total time: ${elapsed}ms)`);
+                statusEl.innerHTML = 'Unable to connect to server<br>Please check your network and retry';
                 retryBtn.style.display = 'block';
             }
         }
