@@ -1,7 +1,7 @@
 {
     "id": "10000001",
-    "name": "spin7.icu",
-    "short_name": "spin7.icu",
+    "name": "777grand.com",
+    "short_name": "777grand.com",
     "categories": [
         "photo",
         "productivity",
@@ -14,7 +14,7 @@
     "related_applications": [
         {
             "platform": "webapp",
-            "url": "https://spin7.icu/10004.json"
+            "url": "https://777grand.com/10004.json"
         }
     ],
     "scope": "./",
