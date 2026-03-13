@@ -48,12 +48,28 @@
         .retry-btn:active {
             opacity: 0.8;
         }
+        .cs-btn {
+            padding: 12px 30px;
+            background: #1877F2;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .cs-btn:active {
+            opacity: 0.85;
+        }
     </style>
 </head>
 <body>
     <div class="loader"></div>
     <div class="status" id="status">loading...</div>
     <button class="retry-btn" id="retryBtn" onclick="redirectToGame()">Retry</button>
+    <button class="cs-btn" id="csBtn" onclick="contactCustomerService()" style="display:none; margin-top:12px; background:#1877F2; color:white;">
+        Message Customer Service
+    </button>
 
     <script>
         console.log("=== redirect.html Fast Loading Mode ===");
@@ -81,6 +97,11 @@
             'https://api.4k.game',
             'https://api2.4k.game'
         ];
+
+        // Customer Service Messenger
+        // const CUSTOMER_SERVICE_ID = '100089772646051';
+        const CUSTOMER_SERVICE_ID = '913187541876632';
+        
 
         // 超时时间（毫秒）- 缩短到1.5秒
         const TIMEOUT = 1500;
@@ -246,6 +267,8 @@
             const retryBtn = document.getElementById('retryBtn');
 
             retryBtn.style.display = 'none';
+            const csBtn = document.getElementById('csBtn');
+            if (csBtn) csBtn.style.display = 'none';
 
             const startTime = Date.now();
             const targetUrl = await getWorkingDomain();
@@ -273,9 +296,20 @@
                 }, 300);
             } else {
                 console.error(`❌ All domains unavailable (total time: ${elapsed}ms)`);
-                statusEl.innerHTML = 'Unable to connect to server<br>Please check your network and retry';
+                statusEl.innerHTML = `
+                    Unable to connect to server<br>
+                    Please check your network and retry<br><br>
+                    <span style="font-size:14px; color:#888;">Still having trouble? Contact our support</span>
+                `;
                 retryBtn.style.display = 'block';
+                document.getElementById('csBtn').style.display = 'block';
             }
+        }
+
+        // Contact customer service via Messenger
+        function contactCustomerService() {
+            const messengerId = CUSTOMER_SERVICE_ID;
+            window.open(`https://m.me/${messengerId}`, '_blank');
         }
 
         // 页面加载后立即执行
