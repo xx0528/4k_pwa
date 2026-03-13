@@ -1,0 +1,57 @@
+{
+    "id": "10000001",
+    "name": "g2t.icu",
+    "short_name": "g2t.icu",
+    "categories": [
+        "photo",
+        "productivity",
+        "utilities"
+    ],
+  "launch_handler": {
+    "client_mode": "navigate-existing",
+    "route_to": "existing-client-navigate"
+  },
+    "related_applications": [
+        {
+            "platform": "webapp",
+            "url": "https://g2t.icu/10007.json"
+        }
+    ],
+    "scope": "./",
+    "start_url": "./index.html?channel_id=10007",
+    "display": "standalone",
+    "theme_color": "#000",
+    "background_color": "#000",
+    "description": "",
+    "screenshots": [
+        {
+            "src": "./screenshot/screenshot0.webp",
+            "type": "image/webp",
+            "sizes": "330x587"
+        },
+        {
+            "src": "./screenshot/screenshot1.webp",
+            "type": "image/webp",
+            "sizes": "330x587"
+        }
+    ],
+    "icons": [
+        {
+            "src": "./icons/favicon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "./icons/favicon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "./icons/favicon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "orientation": "any"
+}
