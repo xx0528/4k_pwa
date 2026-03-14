@@ -3,132 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Browser Detection Test v2</title>
+    <title>Test v3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #111; color: #eee; font-family: -apple-system, sans-serif; padding: 15px; font-size: 14px; }
         h2 { color: #6BECA9; margin: 20px 0 10px; font-size: 16px; }
-        h3 { color: #ffb347; margin: 15px 0 8px; font-size: 14px; }
         .card { background: #222; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
         .label { color: #888; font-size: 12px; }
-        .value { color: #fff; word-break: break-all; margin-top: 4px; }
         .pass { color: #6BECA9; font-weight: bold; }
         .fail { color: #ff6b6b; font-weight: bold; }
         .warn { color: #ffb347; font-weight: bold; }
-        .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 8px; }
         .btn-green { background: #6BECA9; color: #000; }
         .btn-blue { background: #1877F2; color: #fff; }
         .btn-red { background: #ff6b6b; color: #fff; }
-        .btn-yellow { background: #ffb347; color: #000; }
-        pre { background: #1a1a1a; padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 11px; color: #ccc; white-space: pre-wrap; word-break: break-all; }
-        .result-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #333; }
-        .result-row:last-child { border-bottom: none; }
+        pre { background: #1a1a1a; padding: 8px; border-radius: 4px; font-size: 11px; color: #ccc; white-space: pre-wrap; word-break: break-all; }
+        .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #333; }
+        .row:last-child { border-bottom: none; }
         .note { background: #1a2a1a; border: 1px solid #6BECA9; border-radius: 8px; padding: 10px; margin: 10px 0; font-size: 12px; color: #aaa; }
         .note b { color: #6BECA9; }
+        .divider { height:1px; background:#444; margin:8px 0; }
     </style>
 </head>
 <body>
 
-<h2>1. User Agent</h2>
-<div class="card">
-    <pre id="ua"></pre>
-</div>
+<h2>1. UA</h2>
+<div class="card"><pre id="ua"></pre></div>
 
-<h2>2. Browser Detection (v2 - fixed)</h2>
+<h2>2. Browser Detection (v3)</h2>
 <div class="note">
-    <b>v2 fix:</b> Facebook and Messenger both have FBAN=FBIOS, cannot use FBAN to tell apart.<br>
-    <b>New rule:</b> Messenger UA has NO "Safari" keyword, Facebook UA HAS "Safari" keyword.
+    <b>Rule:</b> Facebook and Messenger both have FBAN=FBIOS.<br>
+    Facebook UA has "Safari", Messenger UA does NOT have "Safari".
 </div>
-<div class="card" id="browserDetect"></div>
+<div class="card" id="detectResult"></div>
 
-<h2>3. URL Params Solution: sessionStorage</h2>
+<h2>3. URL Params Persistence Test</h2>
 <div class="note">
-    <b>Problem:</b> uni-app routing (switchTab/reLaunch) rewrites the entire URL, any params we add via replaceState get wiped.<br>
-    <b>Solution:</b> Use sessionStorage instead of URL params. sessionStorage survives page navigation within same tab, but is cleared when tab closes. Write device_code + from_meta flag to sessionStorage, read it in external browser.
+    <b>Problem:</b> uni-app routing calls history.replaceState, wipes our params.<br>
+    <b>Solution:</b> Intercept history.pushState/replaceState, auto re-append device_code + from_meta.
 </div>
 
-<h3>3a. Test: Write to sessionStorage (simulates Meta browser)</h3>
 <div class="card">
-    <button class="btn btn-green" onclick="testWriteStorage()">Write device_code + from_meta to sessionStorage</button>
-    <div id="writeStorageResult" style="margin-top:8px;"></div>
+    <button class="btn btn-green" onclick="step1_writeParams()">Step 1: Write device_code + from_meta to URL</button>
+    <div id="step1Result" style="margin-top:8px;"></div>
 </div>
 
-<h3>3b. Test: Read from sessionStorage (simulates any page)</h3>
 <div class="card">
-    <button class="btn btn-blue" onclick="testReadStorage()">Read sessionStorage</button>
-    <div id="readStorageResult" style="margin-top:8px;"></div>
+    <button class="btn btn-red" onclick="step2_simulateRoute()">Step 2: Simulate uni-app route change (wipes params)</button>
+    <div id="step2Result" style="margin-top:8px;"></div>
 </div>
 
-<h3>3c. Test: Clear sessionStorage</h3>
 <div class="card">
-    <button class="btn btn-red" onclick="testClearStorage()">Clear device_code + from_meta from sessionStorage</button>
-    <div id="clearStorageResult" style="margin-top:8px;"></div>
+    <button class="btn btn-blue" onclick="step3_enableIntercept()">Step 3: Enable history intercept (fix)</button>
+    <div id="step3Result" style="margin-top:8px;"></div>
 </div>
 
-<h2>4. URL Params (original approach - for comparison)</h2>
-
-<h3>4a. Write to URL</h3>
 <div class="card">
-    <button class="btn btn-yellow" onclick="testWriteURL()">Write device_code + from_meta to URL</button>
-    <div id="writeUrlResult" style="margin-top:8px;"></div>
+    <button class="btn btn-red" onclick="step4_simulateRouteAgain()">Step 4: Simulate route change again (should keep params now)</button>
+    <div id="step4Result" style="margin-top:8px;"></div>
 </div>
 
-<h3>4b. Current URL</h3>
+<h2>4. Current URL</h2>
 <div class="card">
     <pre id="currentUrl"></pre>
     <button class="btn btn-blue" onclick="copyUrl()" style="margin-top:8px;">Copy URL</button>
-    <div id="copyResult" style="margin-top:8px;"></div>
-</div>
-
-<h3>4c. Simulate uni-app route change (will wipe URL params)</h3>
-<div class="card">
-    <button class="btn btn-red" onclick="simulateRouteChange()">Simulate switchTab to /pages/home/Home</button>
-    <div id="routeResult" style="margin-top:8px;"></div>
-</div>
-
-<h2>5. Full Flow Test</h2>
-<div class="note">
-    <b>Test the complete flow:</b><br>
-    1. Open this page in Facebook/Messenger internal browser<br>
-    2. Click "Simulate ensureDeviceCode" below<br>
-    3. Click "Simulate route change" above to verify sessionStorage survives<br>
-    4. Click "Open in external browser" (system button) or copy URL<br>
-    5. In external browser, click "Check if should auto-redirect"
-</div>
-<div class="card">
-    <button class="btn btn-green" onclick="simulateFullEnsure()">Step 1: Simulate ensureDeviceCode (Meta browser)</button>
-    <div id="fullEnsureResult" style="margin-top:8px;"></div>
-</div>
-<div class="card">
-    <button class="btn btn-blue" onclick="checkAutoRedirect()">Step 2: Check if should auto-redirect (external browser)</button>
-    <div id="autoRedirectResult" style="margin-top:8px;"></div>
+    <span id="copyResult"></span>
 </div>
 
 <script>
-    // ============================================
-    // Browser Detection Logic v2
-    // Key finding: Facebook and Messenger both have FBAN=FBIOS
-    // Difference: Messenger UA has NO "Safari", Facebook UA HAS "Safari"
-    // ============================================
+    // ============================
+    // Browser Detection v3
+    // ============================
+    const ua = navigator.userAgent;
+    document.getElementById('ua').textContent = ua;
 
     const getFBAN = () => {
-        const ua = navigator.userAgent;
-        const match = ua.match(/FBAN\/([^;)\s]+)/);
-        return match ? match[1] : '';
+        const m = ua.match(/FBAN\/([^;)\s]+)/);
+        return m ? m[1] : '';
     };
 
-    // Is this a Meta internal browser (Facebook or Messenger)?
-    const isMetaBrowser = () => {
-        const ua = navigator.userAgent;
-        return /FBAN|FBAV/i.test(ua);
-    };
+    const isMetaBrowser = () => /FBAN|FBAV/i.test(ua);
 
-    // Messenger: has FBAN/FBAV but does NOT have "Safari" in UA
+    // Messenger: has FBAN/FBAV but NO "Safari" in UA
     const isMessengerBrowser = () => {
         if (!isMetaBrowser()) return false;
-        const ua = navigator.userAgent;
-        // Messenger's WebView doesn't include Safari in UA
-        // Also check explicit Messenger/Orca keywords as backup
         if (/\bMessenger\b|\bOrca\b/i.test(ua)) return true;
         return !/Safari/i.test(ua);
     };
@@ -140,235 +98,156 @@
         return true;
     };
 
-    const isChromeBrowser = () => {
-        const ua = navigator.userAgent.toLowerCase();
-        return (ua.indexOf('crios') > -1 || ua.indexOf('chrome') > -1) && !isMetaBrowser();
-    };
+    const isIOS = () => /iPhone|iPad|iPod/i.test(ua);
 
-    const isSafariBrowser = () => {
-        const ua = navigator.userAgent.toLowerCase();
-        return ua.indexOf('safari') > -1 && ua.indexOf('chrome') === -1 && ua.indexOf('crios') === -1 && !isMetaBrowser();
-    };
-
-    const isPWA = () => {
-        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    };
-
-    const isIOS = () => {
-        return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    };
-
-    // ============================================
-    // Display
-    // ============================================
-
-    document.getElementById('ua').textContent = navigator.userAgent;
-
-    function renderBrowserDetect() {
+    // Render detection
+    (function() {
         const fban = getFBAN();
-        const ua = navigator.userAgent;
         const hasSafari = /Safari/i.test(ua);
+        let name = 'Other', cls = 'warn';
+        if (isFacebookBrowser()) { name = 'Facebook App'; cls = 'pass'; }
+        else if (isMessengerBrowser()) { name = 'Messenger App'; cls = 'pass'; }
+        else if (!isMetaBrowser() && /CriOS|Chrome/i.test(ua)) { name = 'Chrome'; cls = 'pass'; }
+        else if (!isMetaBrowser() && hasSafari) { name = 'Safari'; cls = 'pass'; }
 
-        const results = [
-            { label: 'FBAN field', value: fban || '(not found)', cls: fban ? 'pass' : 'warn' },
-            { label: 'UA has "Safari"?', value: hasSafari, cls: hasSafari ? 'pass' : 'fail' },
-            { label: '', value: '', cls: '' },
-            { label: 'isMetaBrowser()', value: isMetaBrowser(), cls: isMetaBrowser() ? 'warn' : '' },
-            { label: 'isFacebookBrowser()', value: isFacebookBrowser(), cls: isFacebookBrowser() ? 'pass' : '' },
-            { label: 'isMessengerBrowser()', value: isMessengerBrowser(), cls: isMessengerBrowser() ? 'pass' : '' },
-            { label: 'isChromeBrowser()', value: isChromeBrowser(), cls: isChromeBrowser() ? 'pass' : '' },
-            { label: 'isSafariBrowser()', value: isSafariBrowser(), cls: isSafariBrowser() ? 'pass' : '' },
-            { label: 'isIOS()', value: isIOS(), cls: '' },
-            { label: 'isPWA()', value: isPWA(), cls: '' },
-        ];
+        let html = `<div class="row"><span style="font-size:16px;">Detected</span><span class="${cls}" style="font-size:20px;">${name}</span></div>`;
+        html += `<div class="divider"></div>`;
+        html += `<div class="row"><span class="label">FBAN</span><span class="${fban?'pass':'warn'}">${fban||'(none)'}</span></div>`;
+        html += `<div class="row"><span class="label">UA has Safari?</span><span class="${hasSafari?'pass':'fail'}">${hasSafari}</span></div>`;
+        html += `<div class="row"><span class="label">isMetaBrowser</span><span>${isMetaBrowser()}</span></div>`;
+        html += `<div class="row"><span class="label">isFacebookBrowser</span><span class="${isFacebookBrowser()?'pass':''}">${isFacebookBrowser()}</span></div>`;
+        html += `<div class="row"><span class="label">isMessengerBrowser</span><span class="${isMessengerBrowser()?'pass':''}">${isMessengerBrowser()}</span></div>`;
+        html += `<div class="row"><span class="label">isIOS</span><span>${isIOS()}</span></div>`;
+        document.getElementById('detectResult').innerHTML = html;
+    })();
 
-        let browserName = 'Unknown';
-        let browserCls = 'warn';
-        if (isFacebookBrowser()) { browserName = 'Facebook App'; browserCls = 'pass'; }
-        else if (isMessengerBrowser()) { browserName = 'Messenger App'; browserCls = 'pass'; }
-        else if (isChromeBrowser()) { browserName = 'Chrome'; browserCls = 'pass'; }
-        else if (isSafariBrowser()) { browserName = 'Safari'; browserCls = 'pass'; }
-        else if (isMetaBrowser()) { browserName = 'Meta (other)'; browserCls = 'warn'; }
+    // ============================
+    // URL Params Persistence Test
+    // ============================
+    let savedDeviceCode = null;
+    let interceptEnabled = false;
 
-        let html = `<div class="result-row"><span>Detected Browser</span><span class="${browserCls}" style="font-size:18px;">${browserName}</span></div>`;
-        html += `<div class="result-row"><span class="label">Detection rule</span><span class="label">${isMetaBrowser() ? (hasSafari ? 'Meta + Safari = Facebook' : 'Meta + no Safari = Messenger') : 'Not Meta browser'}</span></div>`;
-
-        for (const r of results) {
-            if (!r.label) { html += '<div style="height:1px;background:#444;margin:6px 0;"></div>'; continue; }
-            html += `<div class="result-row"><span class="label">${r.label}</span><span class="${r.cls}">${r.value}</span></div>`;
-        }
-
-        const keywords = ['FBAN', 'FBAV', 'Messenger', 'Orca', 'FBIOS', 'FB4A', 'FB_IAB', 'Safari', 'CriOS', 'Chrome'];
-        html += `<div style="height:1px;background:#444;margin:6px 0;"></div>`;
-        html += `<div style="padding:4px 0;"><span class="label">UA keyword scan:</span></div>`;
-        for (const kw of keywords) {
-            const found = ua.indexOf(kw) > -1;
-            html += `<div class="result-row"><span class="label">${kw}</span><span class="${found ? 'pass' : ''}">${found ? 'FOUND' : '-'}</span></div>`;
-        }
-
-        document.getElementById('browserDetect').innerHTML = html;
-    }
-    renderBrowserDetect();
-
-    // ============================================
-    // sessionStorage tests
-    // ============================================
-
-    function testWriteStorage() {
-        const testCode = 'dev_' + Date.now().toString(36);
-        sessionStorage.setItem('pwa_device_code', testCode);
-        sessionStorage.setItem('pwa_from_meta', '1');
-        document.getElementById('writeStorageResult').innerHTML = `
-            <span class="pass">Written to sessionStorage!</span><br>
-            <span class="label">pwa_device_code = ${testCode}</span><br>
-            <span class="label">pwa_from_meta = 1</span>
-        `;
-    }
-
-    function testReadStorage() {
-        const code = sessionStorage.getItem('pwa_device_code');
-        const meta = sessionStorage.getItem('pwa_from_meta');
-        const el = document.getElementById('readStorageResult');
-        el.innerHTML = `
-            <div class="result-row"><span>pwa_device_code</span><span class="${code ? 'pass' : 'fail'}">${code || 'NOT FOUND'}</span></div>
-            <div class="result-row"><span>pwa_from_meta</span><span class="${meta ? 'pass' : 'fail'}">${meta || 'NOT FOUND'}</span></div>
-            <div class="result-row"><span>Survives route change?</span><span class="${code ? 'pass' : 'fail'}">${code ? 'YES' : 'NO - data lost'}</span></div>
-        `;
-    }
-
-    function testClearStorage() {
-        sessionStorage.removeItem('pwa_device_code');
-        sessionStorage.removeItem('pwa_from_meta');
-        document.getElementById('clearStorageResult').innerHTML = '<span class="pass">Cleared!</span>';
-    }
-
-    // ============================================
-    // URL params tests (for comparison)
-    // ============================================
-
-    function renderUrl() {
+    function refreshUrlDisplay() {
         document.getElementById('currentUrl').textContent = window.location.href;
     }
-    renderUrl();
+    refreshUrlDisplay();
 
-    function testWriteURL() {
-        const testCode = 'dev_' + Date.now().toString(36);
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('device_code', testCode);
-        urlParams.set('from_meta', '1');
-        const newURL = `${window.location.pathname}?${urlParams.toString()}${window.location.hash}`;
-        window.history.replaceState({}, '', newURL);
-        document.getElementById('writeUrlResult').innerHTML = `<span class="pass">Written to URL!</span><br><span class="label">${window.location.href}</span>`;
-        renderUrl();
-    }
-
-    function simulateRouteChange() {
-        // Simulate what uni-app does on switchTab
-        const newPath = window.location.pathname;
-        window.history.replaceState({}, '', newPath + '#/pages/home/Home');
-        document.getElementById('routeResult').innerHTML = `
-            <span class="fail">URL changed by route!</span><br>
-            <span class="label">New URL: ${window.location.href}</span><br>
-            <span class="label">Search params: ${window.location.search || '(EMPTY - wiped!)'}</span><br><br>
-            <span class="warn">Now click "Read sessionStorage" above to verify it still has data</span>
+    // Step 1: Write params
+    function step1_writeParams() {
+        savedDeviceCode = 'dev_' + Date.now().toString(36);
+        const p = new URLSearchParams(window.location.search);
+        p.set('device_code', savedDeviceCode);
+        p.set('from_meta', '1');
+        const newUrl = window.location.pathname + '?' + p.toString() + window.location.hash;
+        history.replaceState(null, '', newUrl);
+        refreshUrlDisplay();
+        document.getElementById('step1Result').innerHTML = `
+            <span class="pass">Written!</span> device_code=${savedDeviceCode}<br>
+            <span class="label">URL: ${window.location.href}</span>
         `;
-        renderUrl();
     }
 
+    // Step 2: Simulate uni-app route change (wipes params)
+    function step2_simulateRoute() {
+        // This is what uni-app does: replaceState with a new path, no search params
+        history.replaceState(null, '', '/pages/home/Home');
+        refreshUrlDisplay();
+        const p = new URLSearchParams(window.location.search);
+        const has = p.has('device_code');
+        document.getElementById('step2Result').innerHTML = `
+            <span class="${has?'pass':'fail'}">device_code in URL: ${has ? 'YES' : 'GONE! (uni-app wiped it)'}</span><br>
+            <span class="label">URL: ${window.location.href}</span>
+        `;
+    }
+
+    // Step 3: Enable history intercept
+    function step3_enableIntercept() {
+        if (interceptEnabled) {
+            document.getElementById('step3Result').innerHTML = '<span class="warn">Already enabled</span>';
+            return;
+        }
+        interceptEnabled = true;
+
+        // Ensure we have a device_code
+        if (!savedDeviceCode) {
+            savedDeviceCode = 'dev_' + Date.now().toString(36);
+        }
+
+        const origPush = history.pushState.bind(history);
+        const origReplace = history.replaceState.bind(history);
+
+        function patchUrl(url) {
+            if (!url || !savedDeviceCode) return url;
+            try {
+                // url can be relative like '/pages/home/Home' or absolute
+                const base = window.location.origin;
+                const urlObj = new URL(url, base);
+                if (!urlObj.searchParams.has('device_code')) {
+                    urlObj.searchParams.set('device_code', savedDeviceCode);
+                }
+                if (!urlObj.searchParams.has('from_meta')) {
+                    urlObj.searchParams.set('from_meta', '1');
+                }
+                // Return path-relative URL (not full origin)
+                return urlObj.pathname + urlObj.search + urlObj.hash;
+            } catch(e) {
+                return url;
+            }
+        }
+
+        history.pushState = function(state, title, url) {
+            return origPush(state, title, patchUrl(url));
+        };
+        history.replaceState = function(state, title, url) {
+            return origReplace(state, title, patchUrl(url));
+        };
+
+        // Also fix current URL if params are missing
+        const p = new URLSearchParams(window.location.search);
+        if (!p.has('device_code')) {
+            p.set('device_code', savedDeviceCode);
+            p.set('from_meta', '1');
+            origReplace(null, '', window.location.pathname + '?' + p.toString() + window.location.hash);
+        }
+
+        refreshUrlDisplay();
+        document.getElementById('step3Result').innerHTML = `
+            <span class="pass">Intercept enabled!</span><br>
+            <span class="label">history.pushState/replaceState now auto-append device_code + from_meta</span><br>
+            <span class="label">URL: ${window.location.href}</span>
+        `;
+    }
+
+    // Step 4: Simulate route change again
+    function step4_simulateRouteAgain() {
+        // Same as step 2, but now intercepted
+        history.replaceState(null, '', '/pages/promo/Promo');
+        refreshUrlDisplay();
+        const p = new URLSearchParams(window.location.search);
+        const hasDc = p.has('device_code');
+        const hasFm = p.has('from_meta');
+        document.getElementById('step4Result').innerHTML = `
+            <span class="${hasDc?'pass':'fail'}">device_code: ${hasDc ? p.get('device_code') : 'GONE!'}</span><br>
+            <span class="${hasFm?'pass':'fail'}">from_meta: ${hasFm ? p.get('from_meta') : 'GONE!'}</span><br>
+            <span class="label">URL: ${window.location.href}</span><br><br>
+            <span class="${(hasDc&&hasFm)?'pass':'fail'}" style="font-size:16px;">${(hasDc&&hasFm) ? 'SUCCESS - params survived route change!' : 'FAILED - params still wiped'}</span>
+        `;
+    }
+
+    // Copy URL
     function copyUrl() {
         const url = window.location.href;
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(() => {
-                document.getElementById('copyResult').innerHTML = '<span class="pass">Copied!</span>';
+                document.getElementById('copyResult').innerHTML = ' <span class="pass">Copied!</span>';
             }).catch(() => fallbackCopy(url));
-        } else {
-            fallbackCopy(url);
-        }
+        } else { fallbackCopy(url); }
     }
-
-    function fallbackCopy(text) {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand('copy'); document.getElementById('copyResult').innerHTML = '<span class="pass">Copied!</span>'; }
-        catch(e) { document.getElementById('copyResult').innerHTML = '<span class="fail">Failed</span>'; }
-        document.body.removeChild(ta);
-    }
-
-    // ============================================
-    // Full flow test
-    // ============================================
-
-    function simulateFullEnsure() {
-        const testCode = 'dev_' + Date.now().toString(36);
-        const el = document.getElementById('fullEnsureResult');
-
-        if (!isMetaBrowser()) {
-            el.innerHTML = '<span class="warn">Not in Meta browser. This step is for Meta internal browser only.</span>';
-            return;
-        }
-
-        // Write to sessionStorage (survives route changes)
-        sessionStorage.setItem('pwa_device_code', testCode);
-        sessionStorage.setItem('pwa_from_meta', '1');
-
-        // Also try to write to URL (may be wiped by routing)
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('device_code', testCode);
-            urlParams.set('from_meta', '1');
-            const newURL = `${window.location.pathname}?${urlParams.toString()}${window.location.hash}`;
-            window.history.replaceState({}, '', newURL);
-        } catch(e) {}
-
-        el.innerHTML = `
-            <span class="pass">Done! Wrote to both sessionStorage and URL.</span><br>
-            <span class="label">device_code: ${testCode}</span><br>
-            <span class="label">from_meta: 1</span><br><br>
-            <span class="warn">Now try:</span><br>
-            <span class="label">1. Click "Simulate route change" to verify sessionStorage survives</span><br>
-            <span class="label">2. Open in external browser and click "Check auto-redirect"</span>
-        `;
-        renderUrl();
-    }
-
-    function checkAutoRedirect() {
-        const el = document.getElementById('autoRedirectResult');
-
-        // Method 1: Check URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlDeviceCode = urlParams.get('device_code');
-        const urlFromMeta = urlParams.get('from_meta');
-
-        // Method 2: Check sessionStorage
-        const ssDeviceCode = sessionStorage.getItem('pwa_device_code');
-        const ssFromMeta = sessionStorage.getItem('pwa_from_meta');
-
-        const isMeta = isMetaBrowser();
-        const ios = isIOS();
-
-        // Determine best device_code source
-        const deviceCode = urlDeviceCode || ssDeviceCode;
-        const fromMeta = urlFromMeta || ssFromMeta;
-
-        let shouldRedirect = fromMeta === '1' && ios && !isMeta;
-
-        el.innerHTML = `
-            <div class="result-row"><span>URL device_code</span><span class="${urlDeviceCode ? 'pass' : 'fail'}">${urlDeviceCode || 'MISSING'}</span></div>
-            <div class="result-row"><span>URL from_meta</span><span class="${urlFromMeta ? 'pass' : 'fail'}">${urlFromMeta || 'MISSING'}</span></div>
-            <div style="height:1px;background:#444;margin:6px 0;"></div>
-            <div class="result-row"><span>sessionStorage device_code</span><span class="${ssDeviceCode ? 'pass' : 'fail'}">${ssDeviceCode || 'MISSING'}</span></div>
-            <div class="result-row"><span>sessionStorage from_meta</span><span class="${ssFromMeta ? 'pass' : 'fail'}">${ssFromMeta || 'MISSING'}</span></div>
-            <div style="height:1px;background:#444;margin:6px 0;"></div>
-            <div class="result-row"><span>Best device_code</span><span class="${deviceCode ? 'pass' : 'fail'}">${deviceCode || 'NONE'}</span></div>
-            <div class="result-row"><span>isIOS</span><span>${ios}</span></div>
-            <div class="result-row"><span>isMetaBrowser (should be false)</span><span class="${!isMeta ? 'pass' : 'fail'}">${isMeta}</span></div>
-            <div class="result-row"><span><b>Should auto-redirect to ios-guide?</b></span><span class="${shouldRedirect ? 'pass' : 'fail'}" style="font-size:16px;">${shouldRedirect ? 'YES' : 'NO'}</span></div>
-            <div style="margin-top:8px;"><span class="label">Note: sessionStorage is per-tab, does NOT carry to external browser. URL params may be wiped by uni-app routing. Need localStorage as bridge.</span></div>
-        `;
+    function fallbackCopy(t) {
+        const a = document.createElement('textarea'); a.value = t; a.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(a); a.select();
+        try { document.execCommand('copy'); document.getElementById('copyResult').innerHTML = ' <span class="pass">Copied!</span>'; } catch(e) {}
+        document.body.removeChild(a);
     }
 </script>
 </body>
