@@ -21,7 +21,7 @@
         .btn-red { background: #ff6b6b; color: #fff; }
         .btn-orange { background: #ffb347; color: #000; }
         .btn-purple { background: #BB86FC; color: #000; }
-        .btn-sm { padding: 10px; font-size: 13px; display: inline-block; width: auto; margin-right: 6px; }
+        .btn-sm { padding: 10px; font-size: 13px; display: inline-block; width: auto; margin-right: 6px; margin-bottom: 6px; }
         pre { background: #1a1a1a; padding: 8px; border-radius: 4px; font-size: 11px; color: #ccc; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
         .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #333; align-items: center; }
         .row:last-child { border-bottom: none; }
@@ -47,7 +47,7 @@
 </head>
 <body>
 
-<h2>🔍 跨浏览器 Device Code 追踪测试</h2>
+<h2>跨浏览器 Device Code 追踪测试</h2>
 
 <div class="note">
     <b>测试场景：</b>清空所有缓存 → 点广告(FB内置浏览器) → 跳到外部浏览器 → 验证是否同一个 device_code<br>
@@ -58,68 +58,40 @@
 <h2>1. 当前浏览器环境</h2>
 <div class="card" id="envResult"></div>
 
-<!-- ===== Section 2: 优先级模拟 ===== -->
-<h2>2. Device Code 优先级模拟</h2>
+<!-- ===== Section 2: 优先级检测 ===== -->
+<h2>2. Device Code 优先级（当前状态）</h2>
 <div class="note note-warn">
-    <b>优先级顺序：</b><br>
-    1️⃣ URL参数 device_code（跨浏览器传递）<br>
-    2️⃣ localStorage browserCode（已有账号）<br>
-    3️⃣ fbclid / fbc / fbp（首次广告进入）<br>
-    4️⃣ FingerprintJS 指纹（兜底）<br>
-    5️⃣ 随机生成（最终兜底）
+    <b>优先级顺序：</b>
+    1. URL device_code → 2. localStorage → 3. fbclid → 4. 指纹 → 5. 随机
+</div>
+<div class="card">
+    <div class="row"><span class="label">P1: URL device_code</span><span id="p1_url_dc">-</span></div>
+    <div class="row"><span class="label">P2: localStorage browserCode</span><span id="p2_ls_bc">-</span></div>
+    <div class="row"><span class="label">P3: URL fbclid/fbc/fbp</span><span id="p3_fbclid">-</span></div>
+    <div class="divider"></div>
+    <div class="row"><span class="label">命中</span><span id="p_hit" class="pass" style="font-size:16px;">-</span></div>
+    <div class="row"><span class="label">最终 device_code</span><span id="p_final" style="font-size:13px; font-family:monospace;">-</span></div>
 </div>
 
+<!-- ===== Section 3: 一键全流程测试 ===== -->
+<h2>3. 一键全流程测试</h2>
 <div class="card">
-    <div class="row"><span class="label">URL device_code</span><span id="p1_url_dc">-</span></div>
-    <div class="row"><span class="label">localStorage browserCode</span><span id="p2_ls_bc">-</span></div>
-    <div class="row"><span class="label">URL fbclid/fbc/fbp</span><span id="p3_fbclid">-</span></div>
-    <div class="row"><span class="label">最终命中</span><span id="p_hit" class="pass" style="font-size:16px;">-</span></div>
-    <div class="row"><span class="label">最终 device_code</span><span id="p_final" style="font-size:14px; font-family:monospace;">-</span></div>
-</div>
-
-<!-- ===== Section 3: 完整流程模拟 ===== -->
-<h2>3. 完整流程模拟测试</h2>
-
-<h3>步骤 A：模拟 FB 内置浏览器首次进入</h3>
-<div class="card">
-    <div class="note">模拟场景：用户清空缓存后，点 FB 广告进来，URL 带 fbclid</div>
-    <button class="btn btn-blue" onclick="stepA_simulateFBEntry()">模拟 FB 广告进入（带fbclid）</button>
-    <div id="stepA_result" style="margin-top:8px;"></div>
-</div>
-
-<h3>步骤 B：检查 URL 是否被正确写入 device_code</h3>
-<div class="card">
-    <button class="btn btn-green" onclick="stepB_checkURL()">检查当前 URL</button>
-    <div id="stepB_result" style="margin-top:8px;"></div>
-</div>
-
-<h3>步骤 C：模拟 uni-app 路由变化（测试 history 拦截）</h3>
-<div class="card">
-    <div class="note note-warn"><b>关键！</b>uni-app 路由会调用 replaceState 冲掉URL参数。<br>如果 history 拦截没有正确工作，用户点"在外部浏览器打开"时 URL 里就没有 device_code。</div>
-    <button class="btn btn-red" onclick="stepC_simulateRoute()">模拟 uni-app 路由变化</button>
-    <div id="stepC_result" style="margin-top:8px;"></div>
-</div>
-
-<h3>步骤 D：模拟"在外部浏览器打开"</h3>
-<div class="card">
-    <div class="note">复制当前 URL，在 Safari/Chrome 中打开。<br>
-    外部浏览器应该从 URL 读到 device_code（优先级1）。</div>
-    <button class="btn btn-purple" onclick="stepD_copyForExternal()">复制 URL（模拟外部浏览器打开）</button>
-    <div id="stepD_result" style="margin-top:8px;"></div>
-</div>
-
-<h3>步骤 E：模拟外部浏览器接收（验证 device_code 一致性）</h3>
-<div class="card">
-    <div class="note">在外部浏览器打开复制的 URL 后，测试是否能正确读取 device_code</div>
-    <button class="btn btn-green" onclick="stepE_verifyExternal()">验证外部浏览器端</button>
-    <div id="stepE_result" style="margin-top:8px;"></div>
-</div>
-
-<!-- ===== Section 4: 一键全流程测试 ===== -->
-<h2>4. 一键自动测试</h2>
-<div class="card">
-    <button class="btn btn-orange" onclick="runFullTest()">🚀 一键模拟完整流程</button>
+    <div class="note">
+        <b>模拟完整流程：</b><br>
+        清缓存 → fbclid进入 → 优先级判断 → 写URL → uni-app路由冲击（多次） → 检查device_code是否存活 → 生成外部浏览器URL
+    </div>
+    <button class="btn btn-orange" onclick="runFullTest()">一键模拟完整流程</button>
     <div id="fullTestResult" style="margin-top:8px;"></div>
+</div>
+
+<!-- ===== Section 4: 外部浏览器验证 ===== -->
+<h2>4. 外部浏览器验证</h2>
+<div class="card">
+    <div class="note">
+        如果你是从外部浏览器打开的（通过上面的复制URL），点此验证 device_code 是否正确传递
+    </div>
+    <button class="btn btn-green" onclick="verifyExternal()">验证外部浏览器端</button>
+    <div id="externalResult" style="margin-top:8px;"></div>
 </div>
 
 <!-- ===== Section 5: 工具 ===== -->
@@ -127,11 +99,11 @@
 <div class="card">
     <button class="btn btn-sm btn-red" onclick="clearAllStorage()">清空 localStorage</button>
     <button class="btn btn-sm btn-blue" onclick="showStorage()">查看 localStorage</button>
-    <button class="btn btn-sm btn-green" onclick="showCurrentURL()">刷新 URL 显示</button>
+    <button class="btn btn-sm btn-green" onclick="refreshUrlDisplay()">刷新URL</button>
     <div id="toolResult" style="margin-top:8px;"></div>
 </div>
 
-<!-- ===== Section 6: 实时日志 ===== -->
+<!-- ===== Section 6: 日志 ===== -->
 <h2>6. 操作日志</h2>
 <div class="card">
     <pre id="log"></pre>
@@ -145,7 +117,13 @@
 
 <script>
     // ============================================
-    // 日志系统
+    // 记住测试页面的真实路径（模拟路由变化后用这个拼外部浏览器URL）
+    // ============================================
+    const REAL_PAGE_PATH = window.location.pathname;
+    const REAL_PAGE_ORIGIN = window.location.origin;
+
+    // ============================================
+    // 日志
     // ============================================
     const logEl = document.getElementById('log');
     function log(msg, type = 'info') {
@@ -156,24 +134,19 @@
     }
 
     // ============================================
-    // 浏览器检测（完整复制自 device.js）
+    // 浏览器检测（同 device.js）
     // ============================================
     const ua = navigator.userAgent;
-
     const isMetaBrowser = () => /FBAN|FBAV/i.test(ua);
-
     const isMessengerBrowser = () => {
         if (!isMetaBrowser()) return false;
         if (/\bMessenger\b|\bOrca\b/i.test(ua)) return true;
         return !/Safari/i.test(ua);
     };
-
     const isFacebookBrowser = () => {
         if (!isMetaBrowser()) return false;
-        if (isMessengerBrowser()) return false;
-        return true;
+        return !isMessengerBrowser();
     };
-
     const isIOS = () => /iPhone|iPad|iPod/i.test(ua);
     const isPWA = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
@@ -183,7 +156,6 @@
     (function renderEnv() {
         const fban = (ua.match(/FBAN\/([^;)\s]+)/) || [])[1] || '(none)';
         const hasSafari = /Safari/i.test(ua);
-
         let browser = 'Other', cls = 'warn';
         if (isFacebookBrowser()) { browser = 'Facebook App'; cls = 'pass'; }
         else if (isMessengerBrowser()) { browser = 'Messenger App'; cls = 'pass'; }
@@ -192,77 +164,58 @@
 
         let scenario = '';
         if (isMetaBrowser()) {
-            scenario = '<span class="tag tag-blue">Meta 内置浏览器</span> → device_code 会写入URL，等待跳转到外部浏览器';
+            scenario = '<span class="tag tag-blue">Meta 内置浏览器</span>';
         } else {
             const urlDc = new URLSearchParams(window.location.search).get('device_code');
-            if (urlDc) {
-                scenario = '<span class="tag tag-green">外部浏览器 + URL有device_code</span> → 应该命中优先级1';
-            } else {
-                scenario = '<span class="tag tag-red">外部浏览器 + URL无device_code</span> → 会走 localStorage/fbclid/指纹';
-            }
+            scenario = urlDc
+                ? '<span class="tag tag-green">外部浏览器 + URL有device_code</span>'
+                : '<span class="tag tag-red">外部浏览器 + URL无device_code</span>';
         }
 
-        let html = '';
-        html += `<div class="row"><span style="font-size:16px;">浏览器</span><span class="${cls}" style="font-size:20px;">${browser}</span></div>`;
-        html += `<div class="divider"></div>`;
-        html += `<div class="row"><span class="label">FBAN</span><span>${fban}</span></div>`;
-        html += `<div class="row"><span class="label">UA有Safari?</span><span>${hasSafari}</span></div>`;
-        html += `<div class="row"><span class="label">isMetaBrowser</span><span>${isMetaBrowser()}</span></div>`;
-        html += `<div class="row"><span class="label">isIOS</span><span>${isIOS()}</span></div>`;
-        html += `<div class="row"><span class="label">isPWA</span><span>${isPWA()}</span></div>`;
-        html += `<div class="divider"></div>`;
-        html += `<div class="row"><span class="label">当前场景</span><span>${scenario}</span></div>`;
-        document.getElementById('envResult').innerHTML = html;
+        document.getElementById('envResult').innerHTML = `
+            <div class="row"><span style="font-size:16px;">浏览器</span><span class="${cls}" style="font-size:20px;">${browser}</span></div>
+            <div class="divider"></div>
+            <div class="row"><span class="label">FBAN</span><span>${fban}</span></div>
+            <div class="row"><span class="label">UA有Safari?</span><span>${hasSafari}</span></div>
+            <div class="row"><span class="label">isMetaBrowser</span><span>${isMetaBrowser()}</span></div>
+            <div class="row"><span class="label">isIOS</span><span>${isIOS()}</span></div>
+            <div class="row"><span class="label">isPWA</span><span>${isPWA()}</span></div>
+            <div class="divider"></div>
+            <div class="row"><span class="label">场景</span><span>${scenario}</span></div>
+        `;
     })();
 
     // ============================================
-    // 优先级检测（页面加载时自动执行）
+    // 优先级检测
     // ============================================
-    (function checkPriority() {
+    function checkPriority() {
         const urlParams = new URLSearchParams(window.location.search);
-
-        // P1: URL device_code
         const urlDc = urlParams.get('device_code');
-        document.getElementById('p1_url_dc').innerHTML = urlDc
-            ? `<span class="pass">${urlDc}</span>`
-            : '<span class="label">(无)</span>';
-
-        // P2: localStorage
         let lsDc = null;
         try { lsDc = localStorage.getItem('browserCode') || localStorage.getItem('uni_browserCode'); } catch(e) {}
-        document.getElementById('p2_ls_bc').innerHTML = lsDc
-            ? `<span class="pass">${lsDc}</span>`
-            : '<span class="label">(无)</span>';
-
-        // P3: fbclid
         const fbclid = urlParams.get('fbclid') || urlParams.get('fbcid') || urlParams.get('fbc') || urlParams.get('fbp');
+
+        document.getElementById('p1_url_dc').innerHTML = urlDc
+            ? `<span class="pass">${urlDc}</span>` : '<span class="label">(无)</span>';
+        document.getElementById('p2_ls_bc').innerHTML = lsDc
+            ? `<span class="pass">${lsDc}</span>` : '<span class="label">(无)</span>';
         document.getElementById('p3_fbclid').innerHTML = fbclid
-            ? `<span class="info">${fbclid.substring(0, 30)}...</span>`
+            ? `<span class="info">${fbclid.length > 30 ? fbclid.substring(0, 30) + '...' : fbclid}</span>`
             : '<span class="label">(无)</span>';
 
-        // 判断命中
         let hit = '', finalCode = '';
-        if (urlDc) {
-            hit = '优先级1: URL device_code';
-            finalCode = urlDc;
-        } else if (lsDc) {
-            hit = '优先级2: localStorage';
-            finalCode = lsDc;
-        } else if (fbclid) {
-            hit = '优先级3: fbclid';
-            finalCode = fbclid;
-        } else {
-            hit = '优先级4/5: 指纹或随机';
-            finalCode = '(需要 FingerprintJS)';
-        }
+        if (urlDc) { hit = 'P1: URL device_code'; finalCode = urlDc; }
+        else if (lsDc) { hit = 'P2: localStorage'; finalCode = lsDc; }
+        else if (fbclid) { hit = 'P3: fbclid'; finalCode = fbclid; }
+        else { hit = 'P4/5: 指纹或随机'; finalCode = '(需FingerprintJS)'; }
 
         document.getElementById('p_hit').textContent = hit;
         document.getElementById('p_final').textContent = finalCode;
-        log(`优先级命中: ${hit}, code=${finalCode}`, urlDc ? 'pass' : (lsDc ? 'pass' : 'warn'));
-    })();
+    }
+    checkPriority();
 
     // ============================================
-    // History 拦截（复制自 device.js）
+    // History 拦截（同 device.js）
     // ============================================
     let _metaUrlParams = null;
     let _interceptInstalled = false;
@@ -279,58 +232,43 @@
                 urlObj.searchParams.set('from_meta', _metaUrlParams.from_meta);
             }
             return urlObj.pathname + urlObj.search + urlObj.hash;
-        } catch (e) {
-            return url;
-        }
+        } catch (e) { return url; }
     }
 
     function installHistoryIntercept() {
         if (_interceptInstalled) return;
         _interceptInstalled = true;
-
         const origPush = history.pushState.bind(history);
         const origReplace = history.replaceState.bind(history);
 
         history.pushState = function(state, title, url) {
             const patched = _patchUrl(url);
-            log(`history.pushState 拦截: ${url} → ${patched}`, patched !== url ? 'pass' : 'info');
+            log(`pushState 拦截: ${url} → ${patched}`, patched !== url ? 'pass' : 'info');
             return origPush(state, title, patched);
         };
         history.replaceState = function(state, title, url) {
             const patched = _patchUrl(url);
-            log(`history.replaceState 拦截: ${url} → ${patched}`, patched !== url ? 'pass' : 'info');
+            log(`replaceState 拦截: ${url} → ${patched}`, patched !== url ? 'pass' : 'info');
             return origReplace(state, title, patched);
         };
-
-        log('✅ History 拦截已安装', 'pass');
+        log('History 拦截已安装', 'pass');
     }
 
     function ensureDeviceCodeInURL(deviceCode) {
-        _metaUrlParams = {
-            device_code: deviceCode,
-            from_meta: '1'
-        };
-
+        _metaUrlParams = { device_code: deviceCode, from_meta: '1' };
         installHistoryIntercept();
-
         try {
             const urlParams = new URLSearchParams(window.location.search);
             let changed = false;
-            if (!urlParams.has('device_code')) {
-                urlParams.set('device_code', deviceCode);
-                changed = true;
-            }
-            if (!urlParams.has('from_meta')) {
-                urlParams.set('from_meta', '1');
-                changed = true;
-            }
+            if (!urlParams.has('device_code')) { urlParams.set('device_code', deviceCode); changed = true; }
+            if (!urlParams.has('from_meta')) { urlParams.set('from_meta', '1'); changed = true; }
             if (changed) {
                 const newURL = `${window.location.pathname}?${urlParams.toString()}${window.location.hash}`;
                 window.history.replaceState({}, '', newURL);
-                log(`✅ URL 已写入 device_code=${deviceCode}, from_meta=1`, 'pass');
+                log(`URL 已写入 device_code=${deviceCode}, from_meta=1`, 'pass');
             }
         } catch (error) {
-            log(`❌ URL 写入失败: ${error.message}`, 'fail');
+            log(`URL 写入失败: ${error.message}`, 'fail');
         }
         refreshUrlDisplay();
     }
@@ -344,421 +282,265 @@
     refreshUrlDisplay();
 
     // ============================================
-    // 步骤 A: 模拟 FB 广告进入
-    // ============================================
-    let simulatedDeviceCode = null;
-
-    function stepA_simulateFBEntry() {
-        log('=== 步骤A: 模拟 FB 内置浏览器首次进入 ===', 'warn');
-
-        // 清理已有缓存（模拟清空缓存后）
-        try { localStorage.removeItem('browserCode'); } catch(e) {}
-        try { localStorage.removeItem('uni_browserCode'); } catch(e) {}
-        log('已清空 localStorage browserCode', 'info');
-
-        // 模拟带 fbclid 的 URL
-        const fakeFbclid = 'fb_' + Date.now().toString(36) + '_test';
-        const p = new URLSearchParams(window.location.search);
-        p.set('fbclid', fakeFbclid);
-        // 移除可能存在的 device_code（模拟首次进入）
-        p.delete('device_code');
-        p.delete('from_meta');
-        const newUrl = window.location.pathname + '?' + p.toString();
-        history.replaceState(null, '', newUrl);
-        refreshUrlDisplay();
-
-        log(`fbclid 已写入URL: ${fakeFbclid}`, 'info');
-
-        // 模拟 getBrowserDeviceCode 的优先级逻辑
-        const urlParams = new URLSearchParams(window.location.search);
-
-        // 优先级1: URL device_code → 无
-        const urlDc = urlParams.get('device_code');
-        log(`优先级1 (URL device_code): ${urlDc || '无'}`, urlDc ? 'pass' : 'info');
-
-        // 优先级2: localStorage → 无（已清空）
-        let lsDc = null;
-        try { lsDc = localStorage.getItem('browserCode'); } catch(e) {}
-        log(`优先级2 (localStorage): ${lsDc || '无'}`, lsDc ? 'pass' : 'info');
-
-        // 优先级3: fbclid → 命中！
-        const fbclid = urlParams.get('fbclid');
-        log(`优先级3 (fbclid): ${fbclid || '无'}`, fbclid ? 'pass' : 'info');
-
-        if (fbclid) {
-            simulatedDeviceCode = fbclid;
-            log(`✅ 命中优先级3: deviceId = ${fbclid}`, 'pass');
-
-            // 存入 localStorage
-            try { localStorage.setItem('browserCode', fbclid); } catch(e) {}
-            log(`存入 localStorage browserCode = ${fbclid}`, 'info');
-
-            // 写入 URL（ensureDeviceCodeInURL）
-            ensureDeviceCodeInURL(fbclid);
-        }
-
-        const el = document.getElementById('stepA_result');
-        el.innerHTML = `
-            <span class="pass">✅ FB 内置浏览器模拟完成</span><br>
-            <span class="label">fbclid: ${fakeFbclid}</span><br>
-            <span class="label">deviceId: ${simulatedDeviceCode}</span><br>
-            <span class="label">localStorage: ${localStorage.getItem('browserCode')}</span><br>
-            <span class="warn">⚡ 现在 URL 中应该有 device_code + from_meta</span>
-        `;
-        refreshUrlDisplay();
-    }
-
-    // ============================================
-    // 步骤 B: 检查 URL
-    // ============================================
-    function stepB_checkURL() {
-        log('=== 步骤B: 检查 URL 参数 ===', 'warn');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const dc = urlParams.get('device_code');
-        const fm = urlParams.get('from_meta');
-        const fbclid = urlParams.get('fbclid');
-
-        const hasDc = !!dc;
-        const hasFm = !!fm;
-
-        log(`URL device_code: ${dc || '(无)'}`, hasDc ? 'pass' : 'fail');
-        log(`URL from_meta: ${fm || '(无)'}`, hasFm ? 'pass' : 'fail');
-        log(`URL fbclid: ${fbclid || '(无)'}`, 'info');
-
-        const el = document.getElementById('stepB_result');
-        el.innerHTML = `
-            <div class="row"><span class="label">device_code</span><span class="${hasDc?'pass':'fail'}">${dc || 'MISSING!'}</span></div>
-            <div class="row"><span class="label">from_meta</span><span class="${hasFm?'pass':'fail'}">${fm || 'MISSING!'}</span></div>
-            <div class="row"><span class="label">fbclid</span><span>${fbclid || '(无)'}</span></div>
-            <div class="divider"></div>
-            <span class="${(hasDc&&hasFm)?'pass':'fail'}" style="font-size:14px;">
-                ${(hasDc&&hasFm) ? '✅ URL 参数完整，可以安全跳转到外部浏览器' : '❌ URL 缺少关键参数！外部浏览器将无法获取 device_code'}
-            </span>
-        `;
-    }
-
-    // ============================================
-    // 步骤 C: 模拟路由变化
-    // ============================================
-    function stepC_simulateRoute() {
-        log('=== 步骤C: 模拟 uni-app 路由变化 ===', 'warn');
-
-        // 记录变化前的 URL
-        const beforeUrl = window.location.href;
-        const beforeParams = new URLSearchParams(window.location.search);
-        const beforeDc = beforeParams.get('device_code');
-        log(`路由变化前: device_code=${beforeDc}`, 'info');
-
-        // 模拟 uni-app 的 replaceState（这是 uni-app 路由的实际行为）
-        log('执行: history.replaceState(null, "", "/pages/home/Home")', 'warn');
-        history.replaceState(null, '', '/pages/home/Home');
-
-        // 检查变化后
-        const afterParams = new URLSearchParams(window.location.search);
-        const afterDc = afterParams.get('device_code');
-        const afterFm = afterParams.get('from_meta');
-
-        log(`路由变化后: device_code=${afterDc || '(无)'}`, afterDc ? 'pass' : 'fail');
-
-        const survived = !!afterDc;
-        const el = document.getElementById('stepC_result');
-        el.innerHTML = `
-            <div class="row"><span class="label">变化前 URL</span></div>
-            <pre style="font-size:10px; margin: 4px 0;">${beforeUrl}</pre>
-            <div class="row"><span class="label">变化后 URL</span></div>
-            <pre style="font-size:10px; margin: 4px 0;">${window.location.href}</pre>
-            <div class="divider"></div>
-            <div class="row"><span class="label">device_code 存活?</span><span class="${survived?'pass':'fail'}" style="font-size:16px;">${survived ? '✅ YES - 拦截生效!' : '❌ NO - 被路由冲掉!'}</span></div>
-            <div class="row"><span class="label">from_meta 存活?</span><span class="${afterFm?'pass':'fail'}">${afterFm ? '✅ YES' : '❌ NO'}</span></div>
-            ${!survived ? '<div class="note note-fail"><b>这就是两个号的原因！</b><br>uni-app 路由冲掉了 device_code，用户点"在外部浏览器打开"时URL里没有 device_code，外部浏览器只能走指纹生成新ID。</div>' : ''}
-        `;
-        refreshUrlDisplay();
-    }
-
-    // ============================================
-    // 步骤 D: 复制 URL 模拟外部浏览器打开
-    // ============================================
-    function stepD_copyForExternal() {
-        log('=== 步骤D: 准备外部浏览器 URL ===', 'warn');
-
-        const url = window.location.href;
-        const urlParams = new URLSearchParams(window.location.search);
-        const dc = urlParams.get('device_code');
-
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(url).then(() => {
-                log('URL 已复制到剪贴板', 'pass');
-            }).catch(() => fallbackCopy(url));
-        } else {
-            fallbackCopy(url);
-        }
-
-        const el = document.getElementById('stepD_result');
-        el.innerHTML = `
-            <span class="pass">📋 URL 已复制</span><br>
-            <pre style="font-size:10px; margin: 4px 0;">${url}</pre>
-            <div class="divider"></div>
-            ${dc
-                ? `<span class="pass">✅ URL 中有 device_code=${dc}，外部浏览器应能正确接收</span>`
-                : `<span class="fail">❌ URL 中没有 device_code！外部浏览器将生成新 ID，导致两个号</span>`
-            }
-            <br><br>
-            <span class="label">请在 Safari/Chrome 中打开此 URL，然后点击步骤E验证</span>
-        `;
-    }
-
-    function fallbackCopy(t) {
-        const a = document.createElement('textarea');
-        a.value = t;
-        a.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(a);
-        a.select();
-        try { document.execCommand('copy'); } catch(e) {}
-        document.body.removeChild(a);
-    }
-
-    // ============================================
-    // 步骤 E: 验证外部浏览器端
-    // ============================================
-    function stepE_verifyExternal() {
-        log('=== 步骤E: 外部浏览器验证 ===', 'warn');
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlDc = urlParams.get('device_code');
-        const fromMeta = urlParams.get('from_meta');
-
-        let lsDc = null;
-        try { lsDc = localStorage.getItem('browserCode') || localStorage.getItem('uni_browserCode'); } catch(e) {}
-
-        const isMeta = isMetaBrowser();
-
-        let verdict = '';
-        let verdictClass = '';
-
-        if (isMeta) {
-            verdict = '⚠️ 你仍在 Meta 内置浏览器中！请在外部浏览器打开此 URL';
-            verdictClass = 'warn';
-        } else if (urlDc) {
-            // 外部浏览器 + URL有device_code → 正确！
-            if (lsDc && lsDc !== urlDc) {
-                verdict = `⚠️ URL device_code (${urlDc}) 和 localStorage (${lsDc}) 不一致！URL 优先，但说明之前有旧账号`;
-                verdictClass = 'warn';
-            } else {
-                verdict = `✅ 完美！外部浏览器通过 URL 获取到 device_code=${urlDc}`;
-                verdictClass = 'pass';
-            }
-        } else if (lsDc) {
-            verdict = `⚠️ URL 中没有 device_code，但 localStorage 有 ${lsDc}（旧缓存）。如果是首次（缓存清空后）这里应该是空的`;
-            verdictClass = 'warn';
-        } else {
-            verdict = '❌ URL 无 device_code + localStorage 无缓存 → 将走指纹/随机，会创建新号！这就是两个号的原因';
-            verdictClass = 'fail';
-        }
-
-        const el = document.getElementById('stepE_result');
-        el.innerHTML = `
-            <div class="row"><span class="label">当前浏览器</span><span>${isMeta ? '<span class="warn">Meta内置</span>' : '<span class="pass">外部浏览器</span>'}</span></div>
-            <div class="row"><span class="label">URL device_code</span><span class="${urlDc?'pass':'fail'}">${urlDc || '(无)'}</span></div>
-            <div class="row"><span class="label">URL from_meta</span><span>${fromMeta || '(无)'}</span></div>
-            <div class="row"><span class="label">localStorage</span><span>${lsDc || '(无)'}</span></div>
-            <div class="divider"></div>
-            <div class="note ${verdictClass === 'fail' ? 'note-fail' : verdictClass === 'warn' ? 'note-warn' : ''}">
-                <b>诊断结果：</b>${verdict}
-            </div>
-        `;
-        log(verdict, verdictClass);
-    }
-
-    // ============================================
     // 一键全流程测试
     // ============================================
     async function runFullTest() {
-        log('🚀 === 开始一键全流程测试 ===', 'warn');
+        log('=== 开始一键全流程测试 ===', 'warn');
         const el = document.getElementById('fullTestResult');
         let results = [];
 
-        // Step 1: 清空缓存
-        try { localStorage.removeItem('browserCode'); } catch(e) {}
-        try { localStorage.removeItem('uni_browserCode'); } catch(e) {}
-        results.push({ step: '清空缓存', pass: true, detail: 'localStorage 已清空' });
+        // === 1. 清缓存 ===
+        try { localStorage.removeItem('browserCode'); localStorage.removeItem('uni_browserCode'); } catch(e) {}
+        results.push({ step: '1. 清空缓存', pass: true, detail: 'localStorage 已清空' });
         log('1. 清空 localStorage', 'pass');
 
-        // Step 2: 模拟 FB 进入（带 fbclid）
+        // === 2. 模拟 fbclid URL（保持当前页面真实路径） ===
         const fakeFbclid = 'fb_test_' + Date.now().toString(36);
         const p = new URLSearchParams();
         p.set('fbclid', fakeFbclid);
         p.set('channel_id', '10001');
-        history.replaceState(null, '', window.location.pathname + '?' + p.toString());
+        // 注意：这里用 REAL_PAGE_PATH，不改路径
+        history.replaceState(null, '', REAL_PAGE_PATH + '?' + p.toString());
         refreshUrlDisplay();
-        log(`2. 模拟 FB 广告 URL: fbclid=${fakeFbclid}`, 'info');
+        results.push({ step: '2. 模拟 FB 广告 URL', pass: true, detail: `fbclid=${fakeFbclid}` });
+        log(`2. 模拟 FB 广告: fbclid=${fakeFbclid}`, 'info');
 
-        // Step 3: 执行优先级逻辑
+        // === 3. 优先级判断（模拟 getBrowserDeviceCode 逻辑） ===
         const urlParams = new URLSearchParams(window.location.search);
-        const urlDc = urlParams.get('device_code'); // 应为 null
+        const urlDc = urlParams.get('device_code');
         let lsDc = null;
         try { lsDc = localStorage.getItem('browserCode'); } catch(e) {}
         const fbclid = urlParams.get('fbclid');
 
         let deviceCode = null;
         let hitPriority = '';
+        if (urlDc)       { deviceCode = urlDc;  hitPriority = 'P1: URL device_code'; }
+        else if (lsDc)   { deviceCode = lsDc;   hitPriority = 'P2: localStorage'; }
+        else if (fbclid) { deviceCode = fbclid;  hitPriority = 'P3: fbclid'; }
+        else             { deviceCode = 'fp_' + Math.random().toString(36).slice(2,10); hitPriority = 'P4: 指纹/随机'; }
 
-        if (urlDc) {
-            deviceCode = urlDc;
-            hitPriority = 'P1: URL device_code';
-        } else if (lsDc) {
-            deviceCode = lsDc;
-            hitPriority = 'P2: localStorage';
-        } else if (fbclid) {
-            deviceCode = fbclid;
-            hitPriority = 'P3: fbclid';
-        } else {
-            deviceCode = 'fingerprint_' + Math.random().toString(36).slice(2, 10);
-            hitPriority = 'P4: 指纹/随机';
+        results.push({ step: '3. 优先级判断', pass: true, detail: `命中 ${hitPriority}` });
+        log(`3. 命中: ${hitPriority}, code=${deviceCode}`, 'pass');
+
+        // === 4. 存 localStorage ===
+        try { localStorage.setItem('browserCode', deviceCode); } catch(e) {}
+        log(`4. 存 localStorage: ${deviceCode}`, 'info');
+
+        // === 5. ensureDeviceCodeInURL ===
+        ensureDeviceCodeInURL(deviceCode);
+        results.push({ step: '4. ensureDeviceCodeInURL', pass: true, detail: 'URL 写入 device_code + from_meta' });
+
+        // === 6. 检查写入后 URL ===
+        await new Promise(r => setTimeout(r, 50));
+        let ck = new URLSearchParams(window.location.search);
+        let hasDc = ck.has('device_code');
+        results.push({ step: '5. URL 检查(路由前)', pass: hasDc, detail: `device_code=${ck.get('device_code') || 'MISSING'}` });
+        log(`5. 路由前 URL: device_code=${ck.get('device_code') || 'MISSING'}`, hasDc ? 'pass' : 'fail');
+
+        // === 7. 模拟 uni-app 路由变化（关键！） ===
+        // uni-app 实际行为：replaceState 到一个完全不同的 path，无 query
+        const fakeRoutes = ['/pages/home/Home', '/pages/promo/Promo', '/pages/wallet/Wallet', '/pages/game/Slot'];
+        for (let i = 0; i < fakeRoutes.length; i++) {
+            log(`6.${i+1} 模拟路由: replaceState → ${fakeRoutes[i]}`, 'warn');
+            history.replaceState(null, '', fakeRoutes[i]);
+            await new Promise(r => setTimeout(r, 30));
+
+            // 检查每次路由后参数是否存活
+            const afterParams = new URLSearchParams(window.location.search);
+            const dcAlive = afterParams.get('device_code');
+            const actualPath = window.location.pathname;
+            log(`   结果: path=${actualPath}, device_code=${dcAlive || 'GONE!'}`,
+                dcAlive ? 'pass' : 'fail');
         }
 
-        results.push({ step: '优先级判断', pass: true, detail: `命中 ${hitPriority}, deviceCode=${deviceCode}` });
-        log(`3. 优先级命中: ${hitPriority}`, 'pass');
+        // 最终检查：路由变化后 device_code 是否还在
+        ck = new URLSearchParams(window.location.search);
+        const dcAfterRoutes = ck.get('device_code');
+        const fmAfterRoutes = ck.get('from_meta');
+        const routesSurvived = !!dcAfterRoutes;
 
-        // Step 4: 存入 localStorage
-        try { localStorage.setItem('browserCode', deviceCode); } catch(e) {}
-        log(`4. 存入 localStorage: ${deviceCode}`, 'info');
-
-        // Step 5: ensureDeviceCodeInURL
-        ensureDeviceCodeInURL(deviceCode);
-        results.push({ step: 'URL写入device_code', pass: true, detail: 'ensureDeviceCodeInURL 已执行' });
-        log('5. ensureDeviceCodeInURL 已执行', 'pass');
-
-        // Step 6: 检查 URL
-        await new Promise(r => setTimeout(r, 100));
-        let checkParams = new URLSearchParams(window.location.search);
-        let hasDcInUrl = checkParams.has('device_code');
-        results.push({ step: 'URL检查(路由前)', pass: hasDcInUrl, detail: `device_code in URL: ${hasDcInUrl}` });
-        log(`6. URL 检查: device_code=${checkParams.get('device_code')}`, hasDcInUrl ? 'pass' : 'fail');
-
-        // Step 7: 模拟 uni-app 路由变化（关键测试）
-        log('7. 模拟 uni-app 路由变化...', 'warn');
-        history.replaceState(null, '', '/pages/home/Home');
-        await new Promise(r => setTimeout(r, 50));
-
-        checkParams = new URLSearchParams(window.location.search);
-        const dcAfterRoute = checkParams.get('device_code');
-        const fmAfterRoute = checkParams.get('from_meta');
-        const routeSurvived = !!dcAfterRoute;
         results.push({
-            step: '路由变化后 URL',
-            pass: routeSurvived,
-            detail: routeSurvived
-                ? `device_code=${dcAfterRoute} 存活!`
+            step: '6. 4次路由变化后',
+            pass: routesSurvived,
+            detail: routesSurvived
+                ? `device_code=${dcAfterRoutes} 存活!`
                 : 'device_code 被路由冲掉!'
         });
-        log(`7. 路由后: device_code=${dcAfterRoute || 'GONE!'}`, routeSurvived ? 'pass' : 'fail');
 
-        // Step 8: 再模拟几次路由变化
-        for (let i = 0; i < 3; i++) {
-            history.replaceState(null, '', `/pages/test/Test${i}`);
-            await new Promise(r => setTimeout(r, 30));
-        }
-        checkParams = new URLSearchParams(window.location.search);
-        const dcAfterMultiRoute = checkParams.get('device_code');
-        const multiRouteSurvived = !!dcAfterMultiRoute;
-        results.push({
-            step: '多次路由变化后',
-            pass: multiRouteSurvived,
-            detail: multiRouteSurvived
-                ? `device_code=${dcAfterMultiRoute} 仍然存活!`
-                : 'device_code 在多次路由后丢失!'
-        });
-        log(`8. 多次路由后: device_code=${dcAfterMultiRoute || 'GONE!'}`, multiRouteSurvived ? 'pass' : 'fail');
+        // === 8. 构建外部浏览器 URL ===
+        // 关键修复：外部浏览器 URL 要用测试页面的真实路径，不能用被路由改掉的路径
+        // 因为 FB "在外部浏览器中打开" 读的是当前地址栏，路径已经被改了
+        // 但我们给外部浏览器的 URL 要能访问到这个测试页面
+        const currentSearchAfterRoutes = window.location.search;
+        const externalUrl = REAL_PAGE_ORIGIN + REAL_PAGE_PATH + currentSearchAfterRoutes;
 
-        // Step 9: 模拟外部浏览器接收
-        const finalUrl = window.location.href;
-        const finalDc = new URLSearchParams(window.location.search).get('device_code');
+        // 也看看实际地址栏 URL（被路由改了的）
+        const actualBarUrl = window.location.href;
 
-        let externalResult = false;
-        if (finalDc && finalDc === deviceCode) {
-            externalResult = true;
-            log(`9. ✅ 外部浏览器将收到正确的 device_code: ${finalDc}`, 'pass');
-        } else if (finalDc) {
-            log(`9. ⚠️ device_code 不匹配: URL=${finalDc}, expected=${deviceCode}`, 'warn');
+        let externalOk = false;
+        if (dcAfterRoutes && dcAfterRoutes === deviceCode) {
+            externalOk = true;
+            log(`7. 外部浏览器 URL 正确: device_code=${dcAfterRoutes}`, 'pass');
+        } else if (dcAfterRoutes) {
+            log(`7. device_code 不匹配: ${dcAfterRoutes} vs ${deviceCode}`, 'warn');
         } else {
-            log(`9. ❌ URL 中无 device_code，外部浏览器将创建新号!`, 'fail');
+            log(`7. URL 中无 device_code，外部浏览器将创建新号!`, 'fail');
         }
+
         results.push({
-            step: '外部浏览器模拟',
-            pass: externalResult,
-            detail: externalResult
-                ? `device_code=${finalDc} 与 FB 端一致!`
-                : `不一致! URL=${finalDc}, 原始=${deviceCode}`
+            step: '7. 外部浏览器验证',
+            pass: externalOk,
+            detail: externalOk
+                ? `device_code 一致: ${dcAfterRoutes}`
+                : `不一致! URL=${dcAfterRoutes || '无'}, 原始=${deviceCode}`
         });
 
-        // 渲染结果
+        // === 9. 恢复测试页面路径（不影响参数）===
+        // 把路径恢复回真实页面路径，保留参数，这样页面还能正常刷新
+        const paramsToKeep = window.location.search;
+        history.replaceState(null, '', REAL_PAGE_PATH + paramsToKeep);
+        refreshUrlDisplay();
+        log('8. 已恢复测试页面路径', 'info');
+
+        // === 渲染结果 ===
+        const allPass = results.every(r => r.pass);
         let html = '<div class="timeline">';
         for (const r of results) {
-            const cls = r.pass ? 'done' : 'fail';
-            html += `<div class="timeline-item ${cls}">
+            html += `<div class="timeline-item ${r.pass ? 'done' : 'fail'}">
                 <strong>${r.step}</strong><br>
                 <span class="${r.pass ? 'pass' : 'fail'}">${r.detail}</span>
             </div>`;
         }
         html += '</div>';
 
-        const allPass = results.every(r => r.pass);
         html += `<div class="divider"></div>`;
         html += `<div style="font-size:18px; text-align:center; padding:10px;" class="${allPass?'pass':'fail'}">
-            ${allPass ? '✅ 全部通过! 跨浏览器 device_code 一致' : '❌ 存在问题! device_code 在跳转过程中丢失'}
+            ${allPass ? '全部通过! 跨浏览器 device_code 一致' : '存在问题! device_code 在跳转中丢失'}
         </div>`;
 
+        // 外部浏览器 URL 复制区
+        html += `<div class="divider"></div>`;
+        html += `<h3 style="color:#BB86FC; margin:8px 0;">外部浏览器测试 URL</h3>`;
+
+        if (dcAfterRoutes) {
+            html += `<div class="note">
+                <b>实际地址栏（路由后）：</b><br>
+                <span style="font-size:10px; word-break:break-all;">${actualBarUrl}</span><br><br>
+                <b>外部浏览器可访问 URL（真实页面路径 + 参数）：</b><br>
+                <span style="font-size:10px; word-break:break-all; color:#6BECA9;">${externalUrl}</span><br><br>
+                <b>注意：</b>FB"在外部浏览器打开"读的是地址栏URL（上面那个），路径是 ${window.location.pathname}，不是测试页面路径。<br>
+                在真实应用中这不是问题（路径是游戏页面路径），但在测试中路径指向不存在的页面。<br>
+                <b>关键是看参数部分</b>是否带有 device_code。
+            </div>`;
+            html += `<button class="btn btn-purple" onclick="copyText('${externalUrl}')">复制可访问URL → 去外部浏览器打开</button>`;
+        } else {
+            html += `<div class="note note-fail">
+                <b>device_code 已丢失！</b><br>
+                地址栏URL: ${actualBarUrl}<br>
+                没有 device_code 参数，外部浏览器无法接收到正确的设备ID。<br><br>
+                <b>这就是产生两个号的根因！</b>
+            </div>`;
+        }
+
+        // 诊断建议
         if (!allPass) {
             html += `<div class="note note-fail">
                 <b>问题诊断：</b><br>
-                1. History 拦截可能没有正确安装<br>
-                2. uni-app 路由变化冲掉了 URL 参数<br>
-                3. 用户在路由变化之后点"在外部浏览器打开"，此时 URL 没有 device_code<br>
-                <br>
-                <b>需要检查：</b><br>
-                - device.js 中 ensureDeviceCodeInURL 是否在 getBrowserDeviceCode 执行后立即调用<br>
-                - history 拦截是否在 uni-app 路由初始化之前安装<br>
-                - 是否有其他代码也在修改 history.replaceState
+                1. history 拦截没有正确拦住 uni-app 的 replaceState<br>
+                2. 可能原因：uni-app 在初始化时缓存了 history.replaceState 的引用，然后 device.js 的拦截装在它后面，拦截的已经不是 uni-app 用的那个引用了<br>
+                3. 或者 uni-app 内部直接使用了 window.history 原型方法<br><br>
+                <b>建议：</b><br>
+                - 在 index.html 中（uni-app 加载之前）安装 history 拦截<br>
+                - 或使用 popstate 事件监听，在路由变化后重新写入参数
             </div>`;
         }
 
         el.innerHTML = html;
-        refreshUrlDisplay();
-        log(`=== 测试完成: ${allPass ? '全部通过' : '存在问题'} ===`, allPass ? 'pass' : 'fail');
+        checkPriority();
     }
 
     // ============================================
-    // 工具函数
+    // 外部浏览器验证
     // ============================================
+    function verifyExternal() {
+        log('=== 外部浏览器验证 ===', 'warn');
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDc = urlParams.get('device_code');
+        const fromMeta = urlParams.get('from_meta');
+        let lsDc = null;
+        try { lsDc = localStorage.getItem('browserCode') || localStorage.getItem('uni_browserCode'); } catch(e) {}
+        const isMeta = isMetaBrowser();
+
+        let verdict = '', vClass = '';
+        if (isMeta) {
+            verdict = '你仍在 Meta 内置浏览器中！请在外部浏览器打开';
+            vClass = 'warn';
+        } else if (urlDc) {
+            if (lsDc && lsDc !== urlDc) {
+                verdict = `URL device_code(${urlDc}) != localStorage(${lsDc})，URL优先。说明之前有不同的旧账号`;
+                vClass = 'warn';
+            } else {
+                verdict = `完美！外部浏览器通过 URL 接收到 device_code=${urlDc}`;
+                vClass = 'pass';
+            }
+        } else if (lsDc) {
+            verdict = `URL 无 device_code，但 localStorage 有 ${lsDc}。清缓存后这里不该有值`;
+            vClass = 'warn';
+        } else {
+            verdict = 'URL 无 device_code + localStorage 无缓存 → 将走指纹/随机生成新ID，创建新号！这就是两个号的原因';
+            vClass = 'fail';
+        }
+
+        document.getElementById('externalResult').innerHTML = `
+            <div class="row"><span class="label">浏览器</span><span>${isMeta ? '<span class="warn">Meta内置</span>' : '<span class="pass">外部浏览器</span>'}</span></div>
+            <div class="row"><span class="label">URL device_code</span><span class="${urlDc?'pass':'fail'}">${urlDc || '(无)'}</span></div>
+            <div class="row"><span class="label">URL from_meta</span><span>${fromMeta || '(无)'}</span></div>
+            <div class="row"><span class="label">localStorage</span><span>${lsDc || '(无)'}</span></div>
+            <div class="divider"></div>
+            <div class="note ${vClass === 'fail' ? 'note-fail' : vClass === 'warn' ? 'note-warn' : ''}">
+                <b>诊断：</b>${verdict}
+            </div>
+        `;
+        log(verdict, vClass);
+    }
+
+    // ============================================
+    // 工具
+    // ============================================
+    function copyText(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                log('URL 已复制', 'pass');
+                alert('URL 已复制!');
+            }).catch(() => fallbackCopy(text));
+        } else { fallbackCopy(text); }
+    }
+
+    function fallbackCopy(t) {
+        const a = document.createElement('textarea');
+        a.value = t; a.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(a); a.select();
+        try { document.execCommand('copy'); alert('URL 已复制!'); } catch(e) {}
+        document.body.removeChild(a);
+    }
+
     function clearAllStorage() {
-        try {
-            localStorage.removeItem('browserCode');
-            localStorage.removeItem('uni_browserCode');
-            localStorage.removeItem('Token');
-            localStorage.removeItem('Cer');
-        } catch(e) {}
-        log('已清空相关 localStorage', 'pass');
-        document.getElementById('toolResult').innerHTML = '<span class="pass">✅ localStorage 已清空</span>';
+        try { localStorage.removeItem('browserCode'); localStorage.removeItem('uni_browserCode');
+              localStorage.removeItem('Token'); localStorage.removeItem('Cer'); } catch(e) {}
+        log('已清空 localStorage', 'pass');
+        document.getElementById('toolResult').innerHTML = '<span class="pass">localStorage 已清空</span>';
+        checkPriority();
     }
 
     function showStorage() {
         let html = '';
         try {
-            const keys = ['browserCode', 'uni_browserCode', 'Token', 'Cer', 'Phone', 'Password'];
-            for (const key of keys) {
+            for (const key of ['browserCode', 'uni_browserCode', 'Token', 'Cer', 'Phone', 'Password']) {
                 const val = localStorage.getItem(key);
                 html += `<div class="row"><span class="label">${key}</span><span>${val || '<span style="color:#666">(null)</span>'}</span></div>`;
             }
-        } catch(e) {
-            html = '<span class="fail">无法读取 localStorage</span>';
-        }
+        } catch(e) { html = '<span class="fail">无法读取</span>'; }
         document.getElementById('toolResult').innerHTML = html;
-    }
-
-    function showCurrentURL() {
-        refreshUrlDisplay();
-        document.getElementById('toolResult').innerHTML = `<span class="pass">URL 已刷新</span>`;
     }
 </script>
 </body>
