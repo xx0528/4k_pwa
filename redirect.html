@@ -4,6 +4,93 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>loading...</title>
+
+    <!-- 核心错误捕获 - 必须在最顶部，不依赖外部资源 -->
+    <script>
+        // 防止重复执行标记
+        window.__redirectExecuted = false;
+
+        // 全局错误捕获 - 捕获 DNS 失败和网络错误
+        window.addEventListener('error', function(event) {
+            if (window.__redirectExecuted) return;
+
+            console.error('[GlobalError]', event.message, event.filename, event.lineno);
+
+            // 区分错误类型
+            const isDNSError = event.message && (
+                event.message.includes('Failed to fetch') ||
+                event.message.includes('NetworkError') ||
+                event.message.includes('ERR_NAME_NOT_RESOLVED') ||
+                event.message.includes('DNS_PROBE_FINISHED_NXDOMAIN')
+            );
+
+            if (isDNSError) {
+                console.warn('[DNS失败] 检测到DNS解析失败，准备跳转备用域名');
+                handleDNSFailure();
+            }
+        }, true);
+
+        // 全局 unhandledrejection 捕获 - 捕获 Promise 拒绝
+        window.addEventListener('unhandledrejection', function(event) {
+            if (window.__redirectExecuted) return;
+
+            console.error('[UnhandledRejection]', event.reason);
+
+            const isDNSError = event.reason && (
+                event.reason.message?.includes('Failed to fetch') ||
+                event.reason.message?.includes('NetworkError') ||
+                event.reason.message?.includes('ERR_NAME_NOT_RESOLVED')
+            );
+
+            if (isDNSError) {
+                console.warn('[DNS失败] Promise拒绝 - DNS解析失败');
+                handleDNSFailure();
+                event.preventDefault();
+            }
+        });
+
+        // DNS 失败处理函数
+        function handleDNSFailure() {
+            if (window.__redirectExecuted) return;
+            window.__redirectExecuted = true;
+
+            console.log('[DNS失败处理] 开始跳转到备用域名');
+
+            const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
+            const FALLBACK_DOMAINS = [
+                'https://ios.sigame.cc',
+                'https://ios.fbifgm6.cc',
+                'https://ios.hbifgm6.vip'
+            ];
+
+            // 使用第一个备用域名
+            const fallbackDomain = FALLBACK_DOMAINS[0];
+            let finalUrl = fallbackDomain + `/index.html?channel_id=${channelId}`;
+
+            console.log('[DNS失败处理] 跳转到:', finalUrl);
+
+            setTimeout(() => {
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    window.location.replace(finalUrl);
+                } else {
+                    window.location.href = finalUrl;
+                }
+            }, 100);
+        }
+
+        // 超时检测 - 如果主域名在3秒内无响应，认为DNS失败
+        const DNS_TIMEOUT = 3000;
+        const dnsTimeoutTimer = setTimeout(() => {
+            if (window.__redirectExecuted) return;
+
+            console.warn('[超时检测] 主域名3秒无响应，认为DNS失败');
+            handleDNSFailure();
+        }, DNS_TIMEOUT);
+
+        // 标记超时检测已启动
+        window.__dnsTimeoutTimer = dnsTimeoutTimer;
+    </script>
+
     <style>
         body {
             background: #000;
@@ -97,11 +184,9 @@
         ];
 
         // Customer Service Messenger
-        // const CUSTOMER_SERVICE_ID = '100089772646051';
         const CUSTOMER_SERVICE_ID = '913187541876632';
-        
 
-        // 超时时间（毫秒）- 缩短到1.5秒
+        // 超时时间（毫秒）
         const TIMEOUT = 1500;
 
         // 获取缓存的域名
@@ -142,7 +227,6 @@
         async function checkDomainFast(domain) {
             const startTime = Date.now();
             try {
-                // Use no-cors mode, although unable to read status code, can detect network connectivity
                 const testUrl = domain + '/?t=' + Date.now();
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
@@ -243,13 +327,12 @@
             for (const apiDomain of API_DOMAINS) {
                 const gameUrl = await fetchGameUrlFromApi(apiDomain);
                 if (gameUrl) {
-                    // 提取域名部分
                     try {
                         const url = new URL(gameUrl);
                         const domain = url.origin;
                         console.log('🚀 API returned domain:', domain);
                         cacheDomain(domain);
-                        return gameUrl; // 返回完整URL
+                        return gameUrl;
                     } catch (e) {
                         console.error('解析API返回的URL失败:', e);
                     }
@@ -261,6 +344,18 @@
 
         // 跳转到游戏
         async function redirectToGame() {
+            if (window.__redirectExecuted) {
+                console.warn('[redirectToGame] 已执行过跳转，忽略重复调用');
+                return;
+            }
+
+            window.__redirectExecuted = true;
+
+            // 清除超时检测
+            if (window.__dnsTimeoutTimer) {
+                clearTimeout(window.__dnsTimeoutTimer);
+            }
+
             const statusEl = document.getElementById('status');
             const retryBtn = document.getElementById('retryBtn');
 
@@ -273,7 +368,6 @@
             const elapsed = Date.now() - startTime;
 
             if (targetUrl) {
-                // 构建完整URL
                 let finalUrl = targetUrl;
                 if (!targetUrl.includes('?')) {
                     finalUrl += `/index.html?channel_id=${channelId}`;
@@ -294,6 +388,7 @@
                 }, 300);
             } else {
                 console.error(`❌ All domains unavailable (total time: ${elapsed}ms)`);
+                window.__redirectExecuted = false; // 允许重试
                 statusEl.innerHTML = `
                     Unable to connect to server<br>
                     Please check your network and retry<br><br>
