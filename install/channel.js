@@ -85,7 +85,7 @@ const CLIENT_EVENT_TYPE = {
             pixel_list = channelData.pixel_list || []
         }
     }
-    h5_link = h5_link?.length > 0 ? h5_link : `./redirect.html?channel_id=${channel_id}`
+    h5_link = h5_link?.length > 0 ? h5_link : `/4k_pwa/redirect.html?channel_id=${channel_id}`
 
     if (device_code) {
       const h5Url = new URL(h5_link, window.location.origin);
@@ -119,7 +119,7 @@ const CLIENT_EVENT_TYPE = {
   if (isGitHubPage) {
       // 在GitHub页面运行，使用相对路径加载本地manifest
       const manifestName = channel_id == 10001 ? 'manifest.json' : `${channel_id}.json`;
-      link.href = `./${manifestName}`;
+      link.href = `/4k_pwa/${manifestName}`;
   } else if (GITHUB_PWA_DOMAIN && GITHUB_PWA_DOMAIN !== "") {
       // 在其他域名运行时，使用GitHub上的manifest
       const manifestName = channel_id == 10001 ? 'manifest.json' : `${channel_id}.json`;
