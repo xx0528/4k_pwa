@@ -18,7 +18,7 @@
     }
   ],
     "scope": "./",
-    "start_url": "./index.html?channel_id=10001",
+    "start_url": "./redirect.html?channel_id=10001",
     "display": "standalone",
     "theme_color": "#000",
     "background_color": "#000",

@@ -160,6 +160,12 @@ var startChromeNum = 0;
         // 无论是否在独立模式，只要已安装就直接打开游戏页
         if (app.isInstalled()) {
             sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_OPEN, "安装PWA后，并打开H5");
+            console.log('=== install.js: 已安装，直接打开 ===', {
+                h5_link,
+                standalone: app.isInStandaloneMode(),
+                device_code,
+                channel_id
+            });
             if (app.isInStandaloneMode()) {
                 window.location.replace(h5_link);
             } else {
@@ -175,12 +181,24 @@ var startChromeNum = 0;
 
             // 跳转到iOS安装引导页面，显示安装步骤图片
             const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
-            const targetUrl = `./ios-guide.html?channel_id=${channelId}`;
+            const deviceCode = new URLSearchParams(window.location.search).get('device_code') || '';
+            let targetUrl = `./ios-guide.html?channel_id=${channelId}`;
+            if (deviceCode) {
+                targetUrl += `&device_code=${encodeURIComponent(deviceCode)}`;
+            }
             console.log("准备跳转到ios-guide.html:", targetUrl)
 
             window.location.href = targetUrl;
             return
         }
+        console.log('=== install.js: Android/PC 安装流程 ===', {
+            h5_link,
+            device_code,
+            channel_id,
+            isAndroidBrowser: app.isAndroidBrowser(),
+            isStandalone: app.isInStandaloneMode(),
+            userAgent: navigator.userAgent
+        })
         app.recordPwaInstallUser("clickInstallButton")
         if (!isGetBeforeinstallprompt) {//没有安装环境
             console.log("当前没有安装环境")

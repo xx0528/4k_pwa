@@ -192,7 +192,18 @@
 
         // Get URL parameters
         const params = window.location.search;
-        const channelId = new URLSearchParams(params).get('channel_id') || '10001';
+        const urlParams = new URLSearchParams(params);
+        const channelId = urlParams.get('channel_id') || '10001';
+        const deviceCode = urlParams.get('device_code') || '';
+
+        function getRedirectEntryUrl() {
+            const redirectUrl = new URL('./redirect.html', window.location.href);
+            redirectUrl.searchParams.set('channel_id', channelId);
+            if (deviceCode) {
+                redirectUrl.searchParams.set('device_code', deviceCode);
+            }
+            return redirectUrl.toString();
+        }
 
         // Close button handler
         function handleClose() {
@@ -319,6 +330,14 @@
 
         // Show guide after page loads
         window.addEventListener('load', function() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            if (isStandalone) {
+                const redirectEntryUrl = getRedirectEntryUrl();
+                console.log('Standalone mode detected, redirecting to:', redirectEntryUrl);
+                window.location.replace(redirectEntryUrl);
+                return;
+            }
+
             console.log("Page loaded, showing guide");
             setTimeout(showGuide, 500);
         });

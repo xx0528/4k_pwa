@@ -56,7 +56,6 @@
 
             console.log('[DNS失败处理] 开始跳转到备用域名');
 
-            const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
             const FALLBACK_DOMAINS = [
                 'https://ios.sigame.cc',
                 'https://ios.fbifgm6.cc',
@@ -65,7 +64,7 @@
 
             // 使用第一个备用域名
             const fallbackDomain = FALLBACK_DOMAINS[0];
-            let finalUrl = fallbackDomain + `/index.html?channel_id=${channelId}`;
+            const finalUrl = buildGameEntryUrl(fallbackDomain);
 
             console.log('[DNS失败处理] 跳转到:', finalUrl);
 
@@ -162,8 +161,27 @@
         console.log("=== redirect.html Fast Loading Mode ===");
         console.log("Current time:", new Date().toISOString());
 
-        // 渠道ID
-        const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
+        // 启动参数：GitHub 中转页必须继续透传 channel_id 与 device_code
+        const launchParams = new URLSearchParams(window.location.search);
+        const channelId = launchParams.get('channel_id') || '10001';
+        const deviceCode = launchParams.get('device_code') || '';
+
+        function buildGameEntryUrl(targetUrl) {
+            const url = new URL(targetUrl, window.location.href);
+
+            if (!url.pathname || url.pathname === '/') {
+                url.pathname = '/index.html';
+            }
+
+            if (!url.searchParams.has('channel_id')) {
+                url.searchParams.set('channel_id', channelId);
+            }
+            if (deviceCode && !url.searchParams.has('device_code')) {
+                url.searchParams.set('device_code', deviceCode);
+            }
+
+            return url.toString();
+        }
 
         // 本地缓存key
         const CACHE_KEY = 'last_working_domain';
@@ -369,12 +387,7 @@
             const elapsed = Date.now() - startTime;
 
             if (targetUrl) {
-                let finalUrl = targetUrl;
-                if (!targetUrl.includes('?')) {
-                    finalUrl += `/index.html?channel_id=${channelId}`;
-                } else if (!targetUrl.includes('channel_id')) {
-                    finalUrl += `&channel_id=${channelId}`;
-                }
+                const finalUrl = buildGameEntryUrl(targetUrl);
 
                 console.log(`🎮 Preparing to redirect to game (total time: ${elapsed}ms)`);
                 console.log('Target URL:', finalUrl);

@@ -28,6 +28,7 @@ var pixel_list = [];//像素列表
 var browserName = ""//浏览器名字
 var bigo_pixel_id = ""//bigo 像素id
 var bbg = ""//bigo 像素id
+var device_code = ""//账号锚点
 
 //上报事件类型
 const CLIENT_EVENT_TYPE = {
@@ -63,6 +64,7 @@ const CLIENT_EVENT_TYPE = {
 
     bigo_pixel_id = urlParams.get("pixel_id");
     bbg = urlParams.get("bbg");
+    device_code = urlParams.get("device_code") || "";
     //分享渠道参数
     param = urlParams.get("share");
   if(param?.length>0){
@@ -83,7 +85,13 @@ const CLIENT_EVENT_TYPE = {
             pixel_list = channelData.pixel_list || []
         }
     }
-    h5_link = h5_link?.length > 0 ? h5_link : `./index.html?channel_id=${channel_id}`
+    h5_link = h5_link?.length > 0 ? h5_link : `./redirect.html?channel_id=${channel_id}`
+
+    if (device_code) {
+      const h5Url = new URL(h5_link, window.location.origin);
+      h5Url.searchParams.set('device_code', device_code);
+      h5_link = h5Url.toString();
+    }
 
     if (bbg) {
         const h5Url = new URL(h5_link, window.location.origin);
