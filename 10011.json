@@ -1,4 +1,4 @@
-{
+﻿{
     "id": "10000001",
     "name": "d6p.icu",
     "short_name": "d6p.icu",
@@ -17,8 +17,8 @@
             "url": "https://d6p.icu/10011.json"
         }
     ],
-    "scope": "./",
-        "start_url": "./redirect.html?channel_id=10011",
+    "scope": "/4k_pwa/",
+        "start_url": "/4k_pwa/redirect.html?channel_id=10011",
     "display": "standalone",
     "theme_color": "#000",
     "background_color": "#000",

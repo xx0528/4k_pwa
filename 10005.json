@@ -1,4 +1,4 @@
-{
+﻿{
     "id": "10000001",
     "name": "AAY.LOL",
     "short_name": "AAY.LOL",
@@ -17,8 +17,8 @@
             "url": "https://AAY.LOL/10005.json"
         }
     ],
-    "scope": "./",
-        "start_url": "./redirect.html?channel_id=10005",
+    "scope": "/4k_pwa/",
+        "start_url": "/4k_pwa/redirect.html?channel_id=10005",
     "display": "standalone",
     "theme_color": "#000",
     "background_color": "#000",

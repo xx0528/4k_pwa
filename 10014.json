@@ -1,4 +1,4 @@
-{
+﻿{
     "id": "10000001",
     "name": "c49.top",
     "short_name": "c49.top",
@@ -17,8 +17,8 @@
             "url": "https://c49.top/10014.json"
         }
     ],
-    "scope": "./",
-        "start_url": "./redirect.html?channel_id=10014",
+    "scope": "/4k_pwa/",
+        "start_url": "/4k_pwa/redirect.html?channel_id=10014",
     "display": "standalone",
     "theme_color": "#000",
     "background_color": "#000",

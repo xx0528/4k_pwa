@@ -1,4 +1,4 @@
-{
+﻿{
     "id": "10000001",
     "name": "777grand.com",
     "short_name": "777grand.com",
@@ -17,8 +17,8 @@
             "url": "https://777grand.com/10004.json"
         }
     ],
-    "scope": "./",
-        "start_url": "./redirect.html?channel_id=10004",
+    "scope": "/4k_pwa/",
+        "start_url": "/4k_pwa/redirect.html?channel_id=10004",
     "display": "standalone",
     "theme_color": "#000",
     "background_color": "#000",
