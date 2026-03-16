@@ -185,25 +185,43 @@
         let deviceCode = launchParams.get('device_code') || '';
         let channelSource = channelId ? 'url' : '';
         let deviceSource = deviceCode ? 'url' : '';
+        let lsChannelId = '';
+        let lsDeviceCode = '';
+        let cookieChannelId = '';
+        let cookieDeviceCode = '';
 
         // iOS 从主屏启动时可能丢失 query，这里从同域 localStorage 恢复
         try {
-            if (!channelId) {
-                channelId = localStorage.getItem('__launch_channel_id') || '';
-                if (channelId) channelSource = 'localStorage';
+            lsChannelId = localStorage.getItem('__launch_channel_id') || '';
+            lsDeviceCode = localStorage.getItem('__launch_device_code') || '';
+            cookieChannelId = getCookieValue('__launch_channel_id') || '';
+            cookieDeviceCode = getCookieValue('__launch_device_code') || '';
+
+            if (!channelId && lsChannelId) {
+                channelId = lsChannelId;
+                channelSource = 'localStorage';
             }
-            if (!deviceCode) {
-                deviceCode = localStorage.getItem('__launch_device_code') || '';
-                if (deviceCode) deviceSource = 'localStorage';
+            if (!deviceCode && lsDeviceCode) {
+                deviceCode = lsDeviceCode;
+                deviceSource = 'localStorage';
             }
 
-            if (!channelId) {
-                channelId = getCookieValue('__launch_channel_id') || '';
-                if (channelId) channelSource = 'cookie';
+            if (!channelId && cookieChannelId) {
+                channelId = cookieChannelId;
+                channelSource = 'cookie';
             }
-            if (!deviceCode) {
-                deviceCode = getCookieValue('__launch_device_code') || '';
-                if (deviceCode) deviceSource = 'cookie';
+            if (!deviceCode && cookieDeviceCode) {
+                deviceCode = cookieDeviceCode;
+                deviceSource = 'cookie';
+            }
+
+            // iOS 主屏图标常见场景：manifest/start_url 里默认写了 channel_id=10001，覆盖了真实渠道
+            // 若URL是10001且缓存里有非10001渠道，优先使用缓存渠道
+            const urlChannelLooksDefault = launchParams.get('channel_id') === '10001';
+            const storageChannel = lsChannelId || cookieChannelId;
+            if (urlChannelLooksDefault && storageChannel && storageChannel !== '10001') {
+                channelId = storageChannel;
+                channelSource = lsChannelId ? 'localStorage_override_10001' : 'cookie_override_10001';
             }
 
             if (!channelId) {
@@ -239,7 +257,10 @@
             channel_id: channelId,
             device_code: deviceCode ? deviceCode.substring(0, 8) + '...' : '',
             channel_source: channelSource,
-            device_source: deviceSource || (deviceCode ? 'unknown' : 'empty')
+            device_source: deviceSource || (deviceCode ? 'unknown' : 'empty'),
+            raw_url_channel_id: launchParams.get('channel_id') || '',
+            ls_channel_id: lsChannelId || '',
+            cookie_channel_id: cookieChannelId || ''
         });
 
         function buildGameEntryUrl(targetUrl) {
