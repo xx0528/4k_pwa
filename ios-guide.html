@@ -151,6 +151,46 @@
             flex-direction: column;
             align-items: center;
         }
+
+        .debug-box {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px dashed rgba(107, 236, 169, 0.6);
+            border-radius: 10px;
+            padding: 12px;
+            color: #cfeedd;
+            font-size: 12px;
+            line-height: 1.5;
+            word-break: break-all;
+            font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+        }
+
+        .debug-box h4 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #6BECA9;
+        }
+
+        .debug-box .row {
+            margin-bottom: 6px;
+        }
+
+        .copy-debug-btn {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border: 1px solid #6BECA9;
+            background: rgba(107, 236, 169, 0.12);
+            color: #6BECA9;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .copy-debug-btn:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
@@ -182,6 +222,12 @@
                 </ol>
             </div>
         </div>
+
+        <div id="debugBox" class="debug-box">
+            <h4>Debug Params (Temporary)</h4>
+            <div id="debugContent">Initializing...</div>
+            <button class="copy-debug-btn" onclick="copyDebugInfo()">Copy Debug Info</button>
+        </div>
     </div>
 
     <script>
@@ -196,6 +242,22 @@
         const channelId = urlParams.get('channel_id') || '10001';
         const deviceCode = urlParams.get('device_code') || '';
 
+        // 在 GitHub 域名先缓存参数，避免 iOS 从主屏启动时丢失 query
+        try {
+            if (channelId) {
+                localStorage.setItem('__launch_channel_id', channelId);
+            }
+            if (deviceCode) {
+                localStorage.setItem('__launch_device_code', deviceCode);
+                console.log('Saved launch params in ios-guide localStorage:', {
+                    channel_id: channelId,
+                    device_code: deviceCode
+                });
+            }
+        } catch (e) {
+            console.warn('Failed to save launch params in ios-guide:', e);
+        }
+
         function getRedirectEntryUrl() {
             const redirectUrl = new URL('./redirect.html', window.location.href);
             redirectUrl.searchParams.set('channel_id', channelId);
@@ -203,6 +265,75 @@
                 redirectUrl.searchParams.set('device_code', deviceCode);
             }
             return redirectUrl.toString();
+        }
+
+        let latestDebugText = '';
+
+        function renderDebugInfo() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            let cachedChannel = '';
+            let cachedDevice = '';
+            try {
+                cachedChannel = localStorage.getItem('__launch_channel_id') || '';
+                cachedDevice = localStorage.getItem('__launch_device_code') || '';
+            } catch (e) {
+                cachedChannel = '[localStorage read failed]';
+                cachedDevice = '[localStorage read failed]';
+            }
+
+            const debugLines = [
+                `<div class="row">mode: ${isStandalone ? 'standalone' : 'browser'}</div>`,
+                `<div class="row">url_channel_id: ${channelId || '(empty)'}</div>`,
+                `<div class="row">url_device_code: ${deviceCode || '(empty)'}</div>`,
+                `<div class="row">cache_channel_id: ${cachedChannel || '(empty)'}</div>`,
+                `<div class="row">cache_device_code: ${cachedDevice || '(empty)'}</div>`,
+                `<div class="row">href: ${window.location.href}</div>`
+            ];
+
+            latestDebugText = [
+                `mode=${isStandalone ? 'standalone' : 'browser'}`,
+                `url_channel_id=${channelId || ''}`,
+                `url_device_code=${deviceCode || ''}`,
+                `cache_channel_id=${cachedChannel || ''}`,
+                `cache_device_code=${cachedDevice || ''}`,
+                `href=${window.location.href}`,
+                `time=${new Date().toISOString()}`
+            ].join('\n');
+
+            const debugContentEl = document.getElementById('debugContent');
+            if (debugContentEl) {
+                debugContentEl.innerHTML = debugLines.join('');
+            }
+
+            console.log('ios-guide debug snapshot:', {
+                mode: isStandalone ? 'standalone' : 'browser',
+                url_channel_id: channelId || '',
+                url_device_code: deviceCode || '',
+                cache_channel_id: cachedChannel || '',
+                cache_device_code: cachedDevice || '',
+                href: window.location.href
+            });
+        }
+
+        async function copyDebugInfo() {
+            renderDebugInfo();
+
+            try {
+                await navigator.clipboard.writeText(latestDebugText || '');
+                alert('Debug info copied');
+            } catch (e) {
+                console.warn('Clipboard API failed, fallback copy', e);
+                const textarea = document.createElement('textarea');
+                textarea.value = latestDebugText || '';
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Debug info copied');
+            }
         }
 
         // Close button handler
@@ -330,6 +461,8 @@
 
         // Show guide after page loads
         window.addEventListener('load', function() {
+            renderDebugInfo();
+
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             if (isStandalone) {
                 const redirectEntryUrl = getRedirectEntryUrl();
@@ -340,6 +473,12 @@
 
             console.log("Page loaded, showing guide");
             setTimeout(showGuide, 500);
+        });
+
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                renderDebugInfo();
+            }
         });
     </script>
 </body>

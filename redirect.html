@@ -163,8 +163,39 @@
 
         // 启动参数：GitHub 中转页必须继续透传 channel_id 与 device_code
         const launchParams = new URLSearchParams(window.location.search);
-        const channelId = launchParams.get('channel_id') || '10001';
-        const deviceCode = launchParams.get('device_code') || '';
+
+        let channelId = launchParams.get('channel_id') || '';
+        let deviceCode = launchParams.get('device_code') || '';
+
+        // iOS 从主屏启动时可能丢失 query，这里从同域 localStorage 恢复
+        try {
+            if (!channelId) {
+                channelId = localStorage.getItem('__launch_channel_id') || '';
+            }
+            if (!deviceCode) {
+                deviceCode = localStorage.getItem('__launch_device_code') || '';
+            }
+
+            if (!channelId) {
+                channelId = '10001';
+            }
+
+            // 只要 URL 中有参数，就刷新缓存，保证最新值
+            if (launchParams.get('channel_id')) {
+                localStorage.setItem('__launch_channel_id', channelId);
+            }
+            if (launchParams.get('device_code')) {
+                localStorage.setItem('__launch_device_code', deviceCode);
+            }
+        } catch (e) {
+            console.warn('Failed to read/write launch params cache:', e);
+            channelId = channelId || '10001';
+        }
+
+        console.log('redirect launch params:', {
+            channel_id: channelId,
+            device_code: deviceCode ? deviceCode.substring(0, 8) + '...' : ''
+        });
 
         function buildGameEntryUrl(targetUrl) {
             const url = new URL(targetUrl, window.location.href);
