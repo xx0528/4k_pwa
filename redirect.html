@@ -164,37 +164,82 @@
         // 启动参数：GitHub 中转页必须继续透传 channel_id 与 device_code
         const launchParams = new URLSearchParams(window.location.search);
 
+        function getCookieValue(name) {
+            const cookieStr = document.cookie || '';
+            const parts = cookieStr.split(';').map(v => v.trim());
+            for (const part of parts) {
+                if (part.startsWith(name + '=')) {
+                    return decodeURIComponent(part.substring(name.length + 1));
+                }
+            }
+            return '';
+        }
+
+        function setCacheCookie(name, value) {
+            if (!value) return;
+            const maxAge = 60 * 60 * 24 * 30;
+            document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
+
         let channelId = launchParams.get('channel_id') || '';
         let deviceCode = launchParams.get('device_code') || '';
+        let channelSource = channelId ? 'url' : '';
+        let deviceSource = deviceCode ? 'url' : '';
 
         // iOS 从主屏启动时可能丢失 query，这里从同域 localStorage 恢复
         try {
             if (!channelId) {
                 channelId = localStorage.getItem('__launch_channel_id') || '';
+                if (channelId) channelSource = 'localStorage';
             }
             if (!deviceCode) {
                 deviceCode = localStorage.getItem('__launch_device_code') || '';
+                if (deviceCode) deviceSource = 'localStorage';
+            }
+
+            if (!channelId) {
+                channelId = getCookieValue('__launch_channel_id') || '';
+                if (channelId) channelSource = 'cookie';
+            }
+            if (!deviceCode) {
+                deviceCode = getCookieValue('__launch_device_code') || '';
+                if (deviceCode) deviceSource = 'cookie';
             }
 
             if (!channelId) {
                 channelId = '10001';
+                channelSource = 'default';
             }
 
             // 只要 URL 中有参数，就刷新缓存，保证最新值
             if (launchParams.get('channel_id')) {
                 localStorage.setItem('__launch_channel_id', channelId);
+                setCacheCookie('__launch_channel_id', channelId);
             }
             if (launchParams.get('device_code')) {
                 localStorage.setItem('__launch_device_code', deviceCode);
+                setCacheCookie('__launch_device_code', deviceCode);
+            }
+
+            if (!launchParams.get('channel_id') && channelId) {
+                localStorage.setItem('__launch_channel_id', channelId);
+                setCacheCookie('__launch_channel_id', channelId);
+            }
+            if (!launchParams.get('device_code') && deviceCode) {
+                localStorage.setItem('__launch_device_code', deviceCode);
+                setCacheCookie('__launch_device_code', deviceCode);
             }
         } catch (e) {
             console.warn('Failed to read/write launch params cache:', e);
             channelId = channelId || '10001';
+            channelSource = channelSource || 'default';
         }
 
         console.log('redirect launch params:', {
             channel_id: channelId,
-            device_code: deviceCode ? deviceCode.substring(0, 8) + '...' : ''
+            device_code: deviceCode ? deviceCode.substring(0, 8) + '...' : '',
+            channel_source: channelSource,
+            device_source: deviceSource || (deviceCode ? 'unknown' : 'empty')
         });
 
         function buildGameEntryUrl(targetUrl) {

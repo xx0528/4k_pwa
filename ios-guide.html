@@ -242,13 +242,32 @@
         const channelId = urlParams.get('channel_id') || '10001';
         const deviceCode = urlParams.get('device_code') || '';
 
+        function setCacheCookie(name, value) {
+            if (!value) return;
+            const maxAge = 60 * 60 * 24 * 30;
+            document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
+
+        function getCookieValue(name) {
+            const cookieStr = document.cookie || '';
+            const parts = cookieStr.split(';').map(v => v.trim());
+            for (const part of parts) {
+                if (part.startsWith(name + '=')) {
+                    return decodeURIComponent(part.substring(name.length + 1));
+                }
+            }
+            return '';
+        }
+
         // 在 GitHub 域名先缓存参数，避免 iOS 从主屏启动时丢失 query
         try {
             if (channelId) {
                 localStorage.setItem('__launch_channel_id', channelId);
+                setCacheCookie('__launch_channel_id', channelId);
             }
             if (deviceCode) {
                 localStorage.setItem('__launch_device_code', deviceCode);
+                setCacheCookie('__launch_device_code', deviceCode);
                 console.log('Saved launch params in ios-guide localStorage:', {
                     channel_id: channelId,
                     device_code: deviceCode
@@ -273,12 +292,18 @@
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             let cachedChannel = '';
             let cachedDevice = '';
+            let cookieChannel = '';
+            let cookieDevice = '';
             try {
                 cachedChannel = localStorage.getItem('__launch_channel_id') || '';
                 cachedDevice = localStorage.getItem('__launch_device_code') || '';
+                cookieChannel = getCookieValue('__launch_channel_id');
+                cookieDevice = getCookieValue('__launch_device_code');
             } catch (e) {
                 cachedChannel = '[localStorage read failed]';
                 cachedDevice = '[localStorage read failed]';
+                cookieChannel = '[cookie read failed]';
+                cookieDevice = '[cookie read failed]';
             }
 
             const debugLines = [
@@ -287,6 +312,8 @@
                 `<div class="row">url_device_code: ${deviceCode || '(empty)'}</div>`,
                 `<div class="row">cache_channel_id: ${cachedChannel || '(empty)'}</div>`,
                 `<div class="row">cache_device_code: ${cachedDevice || '(empty)'}</div>`,
+                `<div class="row">cookie_channel_id: ${cookieChannel || '(empty)'}</div>`,
+                `<div class="row">cookie_device_code: ${cookieDevice || '(empty)'}</div>`,
                 `<div class="row">href: ${window.location.href}</div>`
             ];
 
@@ -296,6 +323,8 @@
                 `url_device_code=${deviceCode || ''}`,
                 `cache_channel_id=${cachedChannel || ''}`,
                 `cache_device_code=${cachedDevice || ''}`,
+                `cookie_channel_id=${cookieChannel || ''}`,
+                `cookie_device_code=${cookieDevice || ''}`,
                 `href=${window.location.href}`,
                 `time=${new Date().toISOString()}`
             ].join('\n');
@@ -311,6 +340,8 @@
                 url_device_code: deviceCode || '',
                 cache_channel_id: cachedChannel || '',
                 cache_device_code: cachedDevice || '',
+                cookie_channel_id: cookieChannel || '',
+                cookie_device_code: cookieDevice || '',
                 href: window.location.href
             });
         }
