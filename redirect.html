@@ -249,12 +249,17 @@
                 url.pathname = '/index.html';
             }
 
-            if (!url.searchParams.has('channel_id')) {
-                url.searchParams.set('channel_id', channelId);
-            }
-            if (deviceCode && !url.searchParams.has('device_code')) {
+            // 强制使用启动链路恢复出的参数，避免目标URL里残留默认渠道(如10001)覆盖真实渠道
+            url.searchParams.set('channel_id', channelId);
+            if (deviceCode) {
                 url.searchParams.set('device_code', deviceCode);
             }
+
+            console.log('buildGameEntryUrl params override:', {
+                source_target: targetUrl,
+                final_channel_id: channelId,
+                final_device_code: deviceCode ? deviceCode.substring(0, 8) + '...' : ''
+            });
 
             return url.toString();
         }
