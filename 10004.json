@@ -1,7 +1,7 @@
-﻿{
+{
     "id": "10000001",
-    "name": "777grand.com",
-    "short_name": "777grand.com",
+    "name": "s3r.fxballon.icu.com",
+    "short_name": "s3r.fxballon.icu.com",
     "categories": [
         "photo",
         "productivity",
@@ -14,12 +14,13 @@
     "related_applications": [
         {
             "platform": "webapp",
-            "url": "https://777grand.com/10004.json"
+            "url": "https://s3r.xbfifteen2.click/10004.json"
         }
     ],
-    "scope": "/4k_pwa/",
-        "start_url": "/4k_pwa/redirect.html?channel_id=10004",
-    "display": "standalone",
+    "scope": "/",
+    "start_url": "/index.html?channel_id=10004",
+    "display": "fullscreen",
+    "display_override": ["fullscreen", "standalone"],
     "theme_color": "#000",
     "background_color": "#000",
     "description": "",
