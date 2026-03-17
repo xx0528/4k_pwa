@@ -11,7 +11,7 @@ const paLoadingEl = document.getElementById('paLoading')
 
 function App() {
     this.isLoading = true
-    this.isServiceWorkerSupported = function () {//是否支持pwa
+    this.isServiceWorkerSupported = function () {//閺勵垰鎯侀弨顖涘瘮pwa
         return "serviceWorker" in navigator;
     }
     this.registerServiceWorker = function () {
@@ -33,7 +33,7 @@ function App() {
     }
     this.setInstalled = function () {
         var t = `${channel_id}_pwa_install_flag`;
-        localStorage.setItem(t, "true"); // 显式存储为字符串"true"
+        localStorage.setItem(t, "true"); // 閺勬儳绱＄€涙ê鍋嶆稉鍝勭摟缁楋缚瑕?true"
     }
     this.setUnInstalled = function () {
         var t = `${channel_id}_pwa_install_flag`;
@@ -42,7 +42,7 @@ function App() {
     this.isInstalled = function () {
         var t = `${channel_id}_pwa_install_flag`;
         var v = localStorage.getItem(t);
-        return v === "true"; // 严格判断为"true"
+        return v === "true"; // 娑撱儲鐗搁崚銈嗘焽娑?true"
     }
     this.changeToOpen = function () {
         document.getElementById("rapidDiv").style.display = "none";
@@ -60,11 +60,11 @@ function App() {
         iconLoadingEl.classList.add('header-icon-loading-show')
         headerIconEl.style.padding = '18px'
 
-        // 隐藏倒计时元素（关键新增代码）
+        // 闂呮劘妫岄崐鎺曨吀閺冭泛鍘撶槐鐙呯礄閸忔娊鏁弬鏉款杻娴狅絿鐖滈敍?
         apkButtonEl.style.display = 'none';
 
         var d = 0
-        // 间隔从120ms改为140ms，100次×140ms=14秒
+        // 闂傛挳娈ф禒?20ms閺€閫涜礋140ms閿?00濞嗏埗?40ms=14缁?
         var interval = setInterval((() => {
             d += 1
             var e = 10 - Math.floor(10 * d * .01)
@@ -80,7 +80,7 @@ function App() {
                 apkButtonEl.innerHTML = `${e}`
             }
             installProgressEl.innerHTML = `${d}%`
-        }), 140) // 核心修改：120→140ms
+        }), 140) // 閺嶇绺炬穱顔芥暭閿?20閳?40ms
     }
     this.isChrome = function () {
         if (platform.name.indexOf("Chrome") >= 0) {
@@ -88,12 +88,12 @@ function App() {
         }
         return false;
     }
-    //是否android浏览器
+    //閺勵垰鎯乤ndroid濞村繗顫嶉崳?
     this.isAndroidBrowser = function () {
         var userAgent = navigator.userAgent.toLowerCase();
         return /android/.test(userAgent);
     }
-    //跳转到google浏览器
+    //鐠哄疇娴嗛崚鐧祇ogle濞村繗顫嶉崳?
     this.toChrome = function () {
         var ul = new URL(location.href);
         var ulS = ul.toString()
@@ -108,6 +108,49 @@ function App() {
     this.recordPwaInstallUser = function (name, ul) {
         console.log(name)
     }
+
+    // ??????? PWA???????? H5 ??
+    this.openPriorityPWA = async function (targetLink) {
+        try {
+            if (this.isInStandaloneMode()) {
+                window.location.replace(targetLink);
+                return;
+            }
+
+            let isPWAOpened = false;
+            if ('launchQueue' in window) {
+                window.launchQueue.setConsumer((launchParams) => {
+                    if (launchParams.targetURL === targetLink) {
+                        isPWAOpened = true;
+                        window.location.href = targetLink;
+                    }
+                });
+            }
+
+            const pwaWindow = window.open(targetLink, '_blank');
+            if (!pwaWindow) {
+                isPWAOpened = false;
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                try {
+                    isPWAOpened = typeof pwaWindow.document === 'undefined';
+                } catch (e) {
+                    isPWAOpened = true;
+                }
+            }
+
+            if (!isPWAOpened) {
+                if (pwaWindow) {
+                    pwaWindow.close();
+                }
+                window.location.replace(targetLink);
+                console.log('PWA ?????????? H5 ??');
+            }
+        } catch (error) {
+            console.error('?? PWA ??????? H5?', error);
+            window.location.replace(targetLink);
+        }
+    }
 }
 
 
@@ -119,7 +162,7 @@ var isStartToChrome = false;
 var startToChromeTime = null;
 var startChromeNum = 0;
 (function () {
-    //开始等待 记录访问日志
+    //瀵偓婵鐡戝?鐠佹澘缍嶇拋鍧楁６閺冦儱绻?
     app.isLoading = true;
     app.recordPwaInstallUser("accessInstall")
     var isGetBeforeinstallprompt = false
@@ -134,7 +177,7 @@ var startChromeNum = 0;
         }
     }), 1000)
     let appPromptEvent = null;
-    if (app.isInstalled()) {//安装按钮文字变为 "open" 打开
+    if (app.isInstalled()) {//鐎瑰顥婇幐澶愭尦閺傚洤鐡ч崣妯硅礋 "open" 閹垫挸绱?
         app.changeToOpen()
     }
     app.registerServiceWorker()
@@ -147,7 +190,7 @@ var startChromeNum = 0;
         app.recordPwaInstallUser("beforeInstallPrompt")
         return false;
     });
-    //点击事件
+    //閻愮懓鍤禍瀣╂
     var isHandling = false;
     installButton.addEventListener('click', function () {
         if (app.isLoading) {
@@ -157,41 +200,31 @@ var startChromeNum = 0;
         //sendSaveFbData()
         sendSaveShareData()
 
-        // 无论是否在独立模式，只要已安装就直接打开游戏页
+        // 閺冪姾顔戦弰顖氭儊閸︺劎瀚粩瀣佸蹇ョ礉閸欘亣顩﹀鎻掔暔鐟佸懎姘ㄩ惄瀛樺复閹垫挸绱戝〒鍛婂灆妞?
         if (app.isInstalled()) {
-            sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_OPEN, "安装PWA后，并打开H5");
-            console.log('=== install.js: 已安装，直接打开 ===', {
-                h5_link,
-                standalone: app.isInStandaloneMode(),
-                device_code,
-                channel_id
-            });
-            if (app.isInStandaloneMode()) {
-                window.location.replace(h5_link);
-            } else {
-                window.open(h5_link, '_blank');
-            }
-            return; // 直接返回，避免执行后续逻辑
+            sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_OPEN, "安装PWA后，优先唤起PWA");
+            app.openPriorityPWA(h5_link);
+            return;
         }
 
-        if(isIOSOrMac()){//苹果设备
-            console.log("=== install.js: 检测到iOS/Mac设备 ===")
+        if(isIOSOrMac()){//閼昏鐏夌拋鎯ь槵
+            console.log("=== install.js: 濡偓濞村鍩宨OS/Mac鐠佹儳顦?===")
             console.log("User Agent:", navigator.userAgent)
-            console.log("当前URL:", window.location.href)
+            console.log("瑜版挸澧燯RL:", window.location.href)
 
-            // 跳转到iOS安装引导页面，显示安装步骤图片
+            // 鐠哄疇娴嗛崚鐧稯S鐎瑰顥婂鏇烆嚤妞ょ敻娼伴敍灞炬▔缁€鍝勭暔鐟佸懏顒炴銈呮禈閻?
             const channelId = new URLSearchParams(window.location.search).get('channel_id') || '10001';
             const deviceCode = new URLSearchParams(window.location.search).get('device_code') || '';
             let targetUrl = `./ios-guide.html?channel_id=${channelId}`;
             if (deviceCode) {
                 targetUrl += `&device_code=${encodeURIComponent(deviceCode)}`;
             }
-            console.log("准备跳转到ios-guide.html:", targetUrl)
+            console.log("閸戝棗顦捄瀹犳祮閸掔櫡os-guide.html:", targetUrl)
 
             window.location.href = targetUrl;
             return
         }
-        console.log('=== install.js: Android/PC 安装流程 ===', {
+        console.log('=== install.js: Android/PC 鐎瑰顥婂ù浣衡柤 ===', {
             h5_link,
             device_code,
             channel_id,
@@ -200,12 +233,12 @@ var startChromeNum = 0;
             userAgent: navigator.userAgent
         })
         app.recordPwaInstallUser("clickInstallButton")
-        if (!isGetBeforeinstallprompt) {//没有安装环境
-            console.log("当前没有安装环境")
+        if (!isGetBeforeinstallprompt) {//濞屸剝婀佺€瑰顥婇悳顖氼暔
+            console.log("瑜版挸澧犲▽鈩冩箒鐎瑰顥婇悳顖氼暔")
             // window.location.href = h5_link
             if (startChromeNum < 1) {
                 startChromeNum++
-                //等待3秒的动画
+                //缁涘绶?缁夋帞娈戦崝銊ф暰
                 app.isLoading = true;
                 paLoadingEl.classList.add('pa-loading-show')
                 var intervalWait = setInterval((() => {
@@ -217,7 +250,7 @@ var startChromeNum = 0;
                         app.isLoading = false;
                     }
                 }), 500)
-                //跳转到chrome
+                //鐠哄疇娴嗛崚鐧県rome
                 if(app.isAndroidBrowser()){
                     sendClientEventReport(CLIENT_EVENT_TYPE.OPEN_EXTERNAL_BROWSER, "外跳浏览器")
                     app.toChrome()
@@ -226,48 +259,37 @@ var startChromeNum = 0;
                 sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_ERROR, "无法安装PWA，直接打开H5")
                 window.location.href = h5_link
             }
-        } else {//已打开chrome
+        } else {//瀹稿弶澧﹀鈧琧hrome
             if (!isHandling) {
                 isHandling = true;
                 paLoadingEl.classList.add('pa-loading-show')
                 var intervalInstall = setInterval((() => {
                     var endD = new Date()
                     var d = Math.abs(endD.getTime() - startD.getTime())
-                    if (appPromptEvent !== null) {//每一秒检查一次是否得到了PWA安装事件
+                    if (appPromptEvent !== null) {//濮ｅ繋绔寸粔鎺擃梾閺屻儰绔村▎鈩冩Ц閸氾箑绶遍崚棰佺啊PWA鐎瑰顥婃禍瀣╂
                         isHandling = false;
                         paLoadingEl.classList.remove('pa-loading-show');
                         clearInterval(intervalInstall);
                         appPromptEvent.prompt();
                         appPromptEvent.userChoice.then(function (result) {
                             if (result.outcome === 'accepted') {
-                                sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_ACCEPT, "同意安装PWA")
+                                sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_ACCEPT, "閸氬本鍓扮€瑰顥奝WA")
                                 app.recordPwaInstallUser("userAccept")
                                 app.setInstalled()
                                 app.showInstallAni()
                             } else {
-                                sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_CANCEL, "取消安装PWA")
+                                sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_CANCEL, "閸欐牗绉风€瑰顥奝WA")
                                 app.recordPwaInstallUser("userCancel")
                             }
                             appPromptEvent = null;
                         });
                     } else {
-                        if (app.isInstalled()) {//pwa安装完成
-                            sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_OPEN, "安装PWA后，并打开H5")
+                        if (app.isInstalled()) {//pwa????
+                            sendClientEventReport(CLIENT_EVENT_TYPE.PWA_INSTALL_OPEN, "安装PWA后，优先唤起PWA")
                             isHandling = false;
                             paLoadingEl.classList.remove('pa-loading-show');
                             clearInterval(intervalInstall);
-                            if(app.isInStandaloneMode()){
-                                //window.location.replace(h5_link);
-                                 //let newWindow = window.open(h5_link, '_blank');
-                                 //if (!newWindow) {// 新窗口被浏览器拦截，未能成功打开
-                                 //    window.location.replace(h5_link);
-                                // }
-                            }else{
-                                //window.location.href = h5_link
- 				                window.open(h5_link, '_blank');
-
-
-                            }
+                            app.openPriorityPWA(h5_link);
                             return
                         }
                     }
@@ -280,7 +302,7 @@ var startChromeNum = 0;
             }
         }
     });
-    //华为等手机不支持此方法
+    //閸楀簼璐熺粵澶嬪閺堣桨绗夐弨顖涘瘮濮濄倖鏌熷▔?
     // window.addEventListener('appinstalled', function() {
 
     // });
